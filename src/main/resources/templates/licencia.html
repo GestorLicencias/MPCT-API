@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Licencia de Funcionamiento - MPCT</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #c8c8c8;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px 20px;
+    font-family: 'Crimson Text', serif;
+  }
+
+  .document {
+    width: 680px;
+    background: #e8f0f7;
+    border: 2px solid #4a7ab5;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  /* Watermark background pattern */
+  .document::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(100,150,200,0.04) 0px, rgba(100,150,200,0.04) 1px, transparent 1px, transparent 20px),
+      repeating-linear-gradient(-45deg, rgba(100,150,200,0.04) 0px, rgba(100,150,200,0.04) 1px, transparent 1px, transparent 20px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Watermark dragon logo */
+  .watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    height: 420px;
+    opacity: 0.07;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .watermark img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* Blue stripe top */
+  .top-stripe {
+    background: linear-gradient(135deg, #1a4a8a 0%, #2563b8 50%, #1a4a8a 100%);
+    height: 8px;
+    width: 100%;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px 12px;
+    border-bottom: 1px solid #4a7ab5;
+    position: relative;
+    z-index: 1;
+    background: rgba(232, 240, 247, 0.9);
+    gap: 16px;
+  }
+
+  .header-logo {
+    width: 90px;
+    height: 90px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .header-title {
+    flex: 1;
+    text-align: center;
+  }
+
+  .header-title h1 {
+    font-family: 'IM Fell English', serif;
+    font-size: 22px;
+    color: #1a3a6e;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    line-height: 1.2;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+  }
+
+  .header-spacer {
+    width: 90px;
+    flex-shrink: 0;
+  }
+
+  /* Body */
+  .body {
+    padding: 18px 36px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .doc-title {
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .doc-title h2 {
+    font-family: 'IM Fell English', serif;
+    font-size: 15px;
+    color: #1a3a6e;
+    font-weight: normal;
+    letter-spacing: 1px;
+  }
+
+  .doc-title p {
+    font-size: 13px;
+    color: #333;
+    margin-top: 2px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #4a7ab5;
+    margin: 10px 0;
+  }
+
+  .legal-text {
+    font-size: 12.5px;
+    color: #222;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    text-align: justify;
+  }
+
+  .section-title {
+    font-family: 'IM Fell English', serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: #1a3a6e;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .fields-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+  }
+
+  .fields-table tr td {
+    padding: 3px 4px;
+    font-size: 12.5px;
+    vertical-align: top;
+    color: #111;
+  }
+
+  .fields-table tr td:first-child {
+    color: #333;
+    width: 38%;
+    padding-right: 8px;
+    white-space: nowrap;
+  }
+
+  .fields-table tr td:first-child::after {
+    content: ' :';
+  }
+
+  .fields-table tr td:last-child {
+    font-weight: 600;
+    color: #0a1f4e;
+  }
+
+  /* Date and signature row */
+  .footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 12px;
+    margin-bottom: 14px;
+  }
+
+  .date-text {
+    font-size: 12.5px;
+    color: #333;
+    align-self: flex-end;
+    padding-bottom: 4px;
+  }
+
+  .signature-block {
+    text-align: center;
+    min-width: 200px;
+  }
+
+  .signature-stamp {
+    width: 110px;
+    height: 90px;
+    border: 2px solid #1a4a8a;
+    border-radius: 50%;
+    margin: 0 auto 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26,74,138,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .signature-stamp-inner {
+    text-align: center;
+    padding: 6px;
+  }
+
+  .signature-stamp-inner .stamp-title {
+    font-size: 7px;
+    color: #1a4a8a;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+
+  .signature-stamp-inner .stamp-seal {
+    font-size: 18px;
+    color: #1a4a8a;
+    opacity: 0.5;
+    margin: 2px 0;
+  }
+
+  .signature-line {
+    border-top: 1px solid #333;
+    width: 180px;
+    margin: 4px auto 2px;
+  }
+
+  .signature-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #0a1f4e;
+    font-style: italic;
+  }
+
+  .signature-role {
+    font-size: 11px;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Prohibitions */
+  .prohibitions {
+    border: 1px solid #4a7ab5;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.3);
+  }
+
+  .prohibitions h3 {
+    font-size: 12px;
+    font-weight: bold;
+    color: #1a3a6e;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .prohibitions p {
+    font-size: 11.5px;
+    color: #333;
+  }
+
+  /* Mandatory notice */
+  .mandatory-notice {
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #1a3a6e;
+    border-top: 1px solid #4a7ab5;
+    border-bottom: 1px solid #4a7ab5;
+    padding: 6px 0;
+    letter-spacing: 0.5px;
+    margin-bottom: 0;
+  }
+
+  /* Bottom bar */
+  .bottom-bar {
+    background: #1a4a8a;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    margin-top: 0;
+  }
+
+  .bottom-number {
+    background: #fff;
+    color: #1a3a6e;
+    font-family: 'IM Fell English', serif;
+    font-size: 16px;
+    padding: 6px 14px;
+    letter-spacing: 2px;
+    border-right: 2px solid #1a4a8a;
+    font-weight: bold;
+  }
+
+  .bottom-logo-text {
+    color: #fff;
+    font-family: 'IM Fell English', serif;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 0 14px;
+    letter-spacing: 1px;
+  }
+
+  .bottom-divisions {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .bottom-div-1 {
+    background: #2563b8;
+    padding: 6px 14px;
+    color: #fff;
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.3;
+    font-family: 'Crimson Text', serif;
+    font-weight: 600;
+    border-left: 1px solid rgba(255,255,255,0.3);
+  }
+
+  .bottom-div-2 {
+    background: #f5a623;
+    padding: 6px 14px;
+    color: #0a1f4e;
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.3;
+    font-family: 'Crimson Text', serif;
+    font-weight: 700;
+  }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .document { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="document">
+
+  <!-- Dragon watermark -->
+  <div class="watermark">
+    <img th:src="${logoPath}" alt="Escudo">
+  </div>
+
+  <div class="top-stripe"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <img th:src="${logoPath}" alt="Logo MPCT">
+    </div>
+    <div class="header-title">
+      <h1>Municipalidad Provincial<br>Coimera Tangamandapio</h1>
+    </div>
+    <div class="header-spacer"></div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <div class="doc-title">
+      <h2>Licencia de Funcionamiento –</h2>
+      <p th:text="'Nro. ' + ${licencia.numeroLicencia} + ' - 2026 MPCT-GDEL-SGLC'">Nro. 001079 - 2026 MPCT-GDEL-SGLC</p>
+      <p>Ley Nro. 28976</p>
+    </div>
+
+    <hr class="divider">
+
+    <p class="legal-text">
+      En uso de las Facultades conferidas mediante Resolución Gerencial N° 1261-2013-MPCT-GDEL, la
+      Ordenanza Municipal Nro 031-2013-MPCT y la Ley Orgánica de Municipalidades.
+    </p>
+
+    <div class="section-title">CONCEDE A:</div>
+
+    <table class="fields-table">
+      <tr>
+        <td>Titular</td>
+        <td th:text="${titular}">"Aqui pones al Titular"</td>
+      </tr>
+      <tr>
+        <td>Doc. de Identidad</td>
+        <td th:text="${ruc}">"Aqui pones el Ruc"</td>
+      </tr>
+      <tr>
+        <td>Representante Legal</td>
+        <td th:text="${representante}">"Aqui El Representante"</td>
+      </tr>
+      <tr>
+        <td>Doc. de Identidad</td>
+        <td th:text="${dni}">"DNI"</td>
+      </tr>
+      <tr>
+        <td>Nombre Comercial</td>
+        <td th:text="${titular}">"Aqui el Nombre comercial"</td>
+      </tr>
+      <tr>
+        <td>Dirección</td>
+        <td th:text="${direccion}">"Aqui la direccion"</td>
+      </tr>
+      <tr>
+        <td>Código Catastral</td>
+        <td th:text="${codigoCatastral}">"inventas asignado por el Estado a una propiedad o terreno".</td>
+      </tr>
+      <tr>
+        <td>Giro</td>
+        <td th:text="${giro}">" Aqui pones el giro. ".</td>
+      </tr>
+      <tr>
+        <td>Zonificación</td>
+        <td>CM</td>
+      </tr>
+      <tr>
+        <td>Área</td>
+        <td th:text="${area} + ' m2'">"Aqui el area"</td>
+      </tr>
+      <tr>
+        <td>Visto el Expediente</td>
+        <td th:text="${expediente}">14445 - 2026 - MPCT - 1</td>
+      </tr>
+    </table>
+
+    <div class="footer-content">
+      <div class="date-text" th:text="'Coimera Tangamandapio, ' + ${fechaActual}">Coimera Tangamandapio, "24 de Mayo del 2026(aqui pondrias con la fecha del dia que se genera)"</div>
+
+      <div class="signature-block">
+        <div class="signature-stamp">
+          <div class="signature-stamp-inner">
+            <div class="stamp-title">MUNICIPALIDAD PROVINCIAL<br>COIMERA TANGAMANDAPIO<br>SUBGERENCIA DE<br>LICENCIAS Y<br>COMERCIALIZACIÓN</div>
+            <div class="stamp-seal">
+              <img th:src="${firmaPath}" alt="Firma" style="width:100%;height:100%;object-fit:contain;">
+            </div>
+          </div>
+        </div>
+        <div class="signature-line"></div>
+        <div class="signature-name">Mg. Sebastián Chávez Acevedo</div>
+        <div class="signature-role">Sub - Gerente</div>
+      </div>
+    </div>
+
+    <div class="prohibitions">
+      <h3>Prohibiciones al Establecimiento</h3>
+      <p>Prohibido el uso de la Vía Pública y Área de Retiro</p>
+    </div>
+
+    <div class="mandatory-notice">
+      ES OBLIGATORIO QUE SE EXHIBA EN UN LUGAR VISIBLE DEL ESTABLECIMIENTO.
+    </div>
+
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar">
+    <div class="bottom-number" th:text="'N° &nbsp; ' + ${licencia.numeroLicencia}">N° &nbsp; "04592 numeros random que no se repitan"</div>
+    <div class="bottom-logo-text">MPCT</div>
+    <div class="bottom-divisions">
+      <div class="bottom-div-1">Gerencia de Desarrollo<br>Económico</div>
+      <div class="bottom-div-2">Subgerencia de Licencias<br>y Comercialización</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
