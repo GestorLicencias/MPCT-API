@@ -28,6 +28,7 @@ public record TramiteResponse(
         String observacionesGenerales,
         String archivosObservados,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        Boolean pagoRechazado
 ) {
 }

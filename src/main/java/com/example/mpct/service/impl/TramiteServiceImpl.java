@@ -194,11 +194,12 @@ public class TramiteServiceImpl implements TramiteService {
             throw new RuntimeException("El trámite no está en estado PENDIENTE_PAGO");
         }
 
-        Pago pago = Pago.builder()
+        Pago pago = pagoRepository.findByTramiteId(tramite.getId()).orElse(Pago.builder()
                 .tramite(tramite)
                 .monto(tramite.getMontoCobrado())
-                .metodoPago(metodoPago)
-                .build();
+                .build());
+
+        pago.setMetodoPago(metodoPago);
 
         if ("MERCADO_PAGO".equals(metodoPago)) {
             pago.setPasarelaTransactionId(transactionId);
@@ -263,6 +264,11 @@ public class TramiteServiceImpl implements TramiteService {
         if (t.getEstado() == EstadoTramite.APROBADO) {
             certUrl = "/api/v1/tramites/" + t.getRuc() + "/certificado";
         }
+        
+        boolean pagoRechazado = pagoRepository.findByTramiteId(t.getId())
+                .map(p -> "RECHAZADO".equals(p.getEstadoPago()))
+                .orElse(false);
+
         return new TramiteResponse(
                 t.getId(), t.getRuc(), t.getRazonSocial(), t.getDomicilioFiscal(), t.getRepresentanteLegal(), t.getRubro(),
                 t.getDni(), t.getArea(),
@@ -275,7 +281,8 @@ public class TramiteServiceImpl implements TramiteService {
                 certUrl,
                 t.getObservacionesGenerales(),
                 t.getArchivosObservados(),
-                t.getCreatedAt(), t.getUpdatedAt()
+                t.getCreatedAt(), t.getUpdatedAt(),
+                pagoRechazado
         );
     }
 }
