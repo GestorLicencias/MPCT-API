@@ -86,19 +86,41 @@ public class TramiteController {
     }
 
     private ResponseEntity<byte[]> serveFile(byte[] fileBytes, String defaultName, boolean download) {
-        if (fileBytes == null) {
+        if (fileBytes == null || fileBytes.length == 0) {
             return ResponseEntity.notFound().build();
         }
+
         org.springframework.http.MediaType mediaType = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
-        if (defaultName.endsWith(".pdf")) {
-            mediaType = org.springframework.http.MediaType.APPLICATION_PDF;
-        } else if (defaultName.endsWith(".jpg") || defaultName.endsWith(".png") || defaultName.endsWith(".jpeg")) {
-            mediaType = org.springframework.http.MediaType.IMAGE_JPEG;
+        String extension = "";
+
+        if (fileBytes.length > 4) {
+            if (fileBytes[0] == 0x25 && fileBytes[1] == 0x50 && fileBytes[2] == 0x44 && fileBytes[3] == 0x46) {
+                mediaType = org.springframework.http.MediaType.APPLICATION_PDF;
+                extension = ".pdf";
+            } else if ((fileBytes[0] & 0xFF) == 0xFF && (fileBytes[1] & 0xFF) == 0xD8 && (fileBytes[2] & 0xFF) == 0xFF) {
+                mediaType = org.springframework.http.MediaType.IMAGE_JPEG;
+                extension = ".jpg";
+            } else if ((fileBytes[0] & 0xFF) == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) {
+                mediaType = org.springframework.http.MediaType.IMAGE_PNG;
+                extension = ".png";
+            }
         }
+
+        if (extension.isEmpty()) {
+            if (defaultName.endsWith(".pdf")) {
+                mediaType = org.springframework.http.MediaType.APPLICATION_PDF;
+                extension = ".pdf";
+            } else {
+                mediaType = org.springframework.http.MediaType.IMAGE_JPEG;
+                extension = ".jpg";
+            }
+        }
+
+        String filename = defaultName.contains(".") ? defaultName.substring(0, defaultName.lastIndexOf('.')) + extension : defaultName + extension;
 
         org.springframework.http.ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok().contentType(mediaType);
         if (download) {
-            responseBuilder.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + defaultName + "\"");
+            responseBuilder.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
         }
 
         return responseBuilder.body(fileBytes);
