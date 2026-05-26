@@ -31,24 +31,45 @@ public class TramiteServiceImpl implements TramiteService {
     @Transactional
     public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, BigDecimal area, TipoTramite tipo, MultipartFile plano, java.util.List<MultipartFile> fotos) {
         
-        java.util.Optional<Tramite> existingTramite = tramiteRepository.findByRuc(ruc);
-        if (existingTramite.isPresent()) {
-            Tramite t = existingTramite.get();
-            java.util.Optional<Licencia> licenciaOpt = licenciaRepository.findByTramiteId(t.getId());
-            if (licenciaOpt.isPresent()) {
-                Licencia lic = licenciaOpt.get();
-                if (lic.getFechaVencimiento().isAfter(java.time.LocalDateTime.now())) {
-                    throw new RuntimeException("El RUC cuenta con una licencia de funcionamiento activa (Vence el " + 
-                        lic.getFechaVencimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + 
-                        "). No puede gestionar un nuevo trámite hasta que expire.");
+        // --- Validación por tipo de trámite (NUEVO vs RENOVACION) ---
+        java.util.Optional<Licencia> licenciaPreviaOpt = licenciaRepository.findByTramiteRuc(ruc);
+        
+        if (tipo == TipoTramite.RENOVACION) {
+            // Para RENOVACION: debe existir una licencia anterior Y debe estar vencida
+            if (licenciaPreviaOpt.isEmpty()) {
+                throw new RuntimeException("No se encontró una licencia previa para este RUC. Si es la primera vez, seleccione el tipo 'NUEVO'.");
+            }
+            Licencia licenciaPrevia = licenciaPreviaOpt.get();
+            if (licenciaPrevia.getFechaVencimiento().isAfter(LocalDateTime.now())) {
+                throw new RuntimeException("La licencia actual aún está vigente (Vence el " + 
+                    licenciaPrevia.getFechaVencimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + 
+                    "). Debe esperar a que venza para poder renovarla.");
+            }
+            // Licencia vencida encontrada → limpiar trámite y licencia anteriores para crear el nuevo
+            Tramite tramiteAnterior = licenciaPrevia.getTramite();
+            licenciaRepository.delete(licenciaPrevia);
+            tramiteRepository.delete(tramiteAnterior);
+        } else {
+            // Para NUEVO: NO debe existir ninguna licencia previa
+            if (licenciaPreviaOpt.isPresent()) {
+                Licencia licenciaPrevia = licenciaPreviaOpt.get();
+                if (licenciaPrevia.getFechaVencimiento().isAfter(LocalDateTime.now())) {
+                    throw new RuntimeException("El RUC ya cuenta con una licencia activa (Vence el " + 
+                        licenciaPrevia.getFechaVencimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + 
+                        "). No puede solicitar una nueva licencia.");
                 } else {
-                    licenciaRepository.delete(lic);
-                    tramiteRepository.delete(t);
+                    throw new RuntimeException("El RUC tiene una licencia vencida. Debe seleccionar el tipo 'RENOVACIÓN' en lugar de 'NUEVO'.");
                 }
-            } else if (t.getEstado() == EstadoTramite.DENEGADO) {
-                tramiteRepository.delete(t);
-            } else {
-                throw new RuntimeException("Ya existe un trámite en curso para este RUC (Estado: " + t.getEstado() + ").");
+            }
+            // Para NUEVO sin licencia previa: verificar que no haya un trámite en curso
+            java.util.Optional<Tramite> existingTramite = tramiteRepository.findByRuc(ruc);
+            if (existingTramite.isPresent()) {
+                Tramite t = existingTramite.get();
+                if (t.getEstado() == EstadoTramite.DENEGADO) {
+                    tramiteRepository.delete(t);
+                } else {
+                    throw new RuntimeException("Ya existe un trámite en curso para este RUC (Estado: " + t.getEstado() + ").");
+                }
             }
         }
 
