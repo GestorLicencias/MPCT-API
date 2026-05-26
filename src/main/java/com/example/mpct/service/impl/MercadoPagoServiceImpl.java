@@ -37,10 +37,10 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
     @Value("${mercadopago.access.token}")
     private String accessToken;
 
-    @Value("${app.frontend.url:http://localhost:3000}")
+    @Value("${app.frontend.url:https://mpct-frontend.vercel.app}")
     private String frontendUrl;
 
-    @Value("${app.backend.url:http://localhost:8080}")
+    @Value("${app.backend.url:https://mpct-api-264213836001.us-east1.run.app}")
     private String backendUrl;
 
     @PostConstruct

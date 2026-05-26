@@ -46,70 +46,10 @@ public class SunatScrapingServiceImpl implements SunatScrapingService {
             // Debido a bloqueos de Cloudflare en páginas públicas sin token de API, 
             // simularemos la respuesta exacta que espera el inspector basándonos en el nombre,
             // o retornaremos una lista de actividades por defecto.
-            // FUENTE SECUNDARIA: Obtener el Rubro / Actividad Económica usando Playwright para evadir Cloudflare
+            // FUENTE SECUNDARIA: Obtener el Rubro / Actividad Económica
+            // ELIMINADO para evitar bloqueos y demoras de 15 segundos.
+            // El rubro será proporcionado manualmente por el usuario en el frontend.
             String rubro = "No especificado";
-
-            try (com.microsoft.playwright.Playwright playwright = com.microsoft.playwright.Playwright.create()) {
-                com.microsoft.playwright.Browser browser = playwright.chromium().launch(new com.microsoft.playwright.BrowserType.LaunchOptions().setHeadless(true));
-                com.microsoft.playwright.Page page = browser.newPage();
-                page.setDefaultNavigationTimeout(15000); // 15 segundos max
-                
-                // Intentamos extraer directamente de SUNAT oficial
-                page.navigate("https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/jcrS00Alias?accion=consPorRuc&nroRuc=" + ruc);
-                page.waitForLoadState(com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED);
-                
-                // SUNAT muestra las actividades en una tabla con la clase "table"
-                java.util.List<String> trs = page.locator("tr").allInnerTexts();
-                StringBuilder actividades = new StringBuilder();
-                boolean foundActividad = false;
-
-                for (String text : trs) {
-                    if (text.contains("Actividad(es) Económica(s):")) {
-                        // El texto usualmente viene como "Actividad(es) Económica(s): \n Principal - 8530 - ENSEÑANZA SUPERIOR ..."
-                        String cleanText = text.replace("Actividad(es) Económica(s):", "").trim();
-                        // Dividir por saltos de linea
-                        String[] lineas = cleanText.split("\\r?\\n");
-                        for (String linea : lineas) {
-                            linea = linea.trim();
-                            if (!linea.isEmpty() && (linea.startsWith("Principal") || linea.startsWith("Secundaria"))) {
-                                if (actividades.length() > 0) actividades.append("\n");
-                                actividades.append(linea);
-                                foundActividad = true;
-                            }
-                        }
-                        break;
-                    }
-                }
-                
-                if (foundActividad) {
-                    rubro = actividades.toString();
-                } else {
-                    // Backup: universidadperu.com — tiene una página directa por RUC
-                    page.navigate("https://www.universidadperu.com/empresas/" + ruc + ".php");
-                    page.waitForLoadState(com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED);
-                
-                    String bodyText = page.locator("body").innerText();
-                    
-                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)Actividad(?:es)? Económica(?:s)?:?\\s*([^\\n]+)").matcher(bodyText);
-                    if (m.find()) {
-                        rubro = m.group(1).trim();
-                    } else {
-                        m = java.util.regex.Pattern.compile("(?i)CIIU:?\\s*([^\\n]+)").matcher(bodyText);
-                        if (m.find()) {
-                            rubro = m.group(1).trim();
-                        } else {
-                            m = java.util.regex.Pattern.compile("(?i)Giro:?\\s*([^\\n]+)").matcher(bodyText);
-                            if (m.find()) {
-                                rubro = m.group(1).trim();
-                            }
-                        }
-                    }
-                }
-                
-            } catch (Exception ex) {
-                System.out.println("Error al hacer scraping con Playwright: " + ex.getMessage());
-                rubro = "Información no disponible (Error de conexión)";
-            }
 
             return new SunatRucResponse(ruc, razonSocial, estado, condicion, domicilioFiscal, rubro);
 

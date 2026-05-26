@@ -70,6 +70,15 @@ public class InspeccionController {
         tramiteDto.put("domicilioFiscal", insp.getTramite().getDomicilioFiscal());
         tramiteDto.put("representanteLegal", insp.getTramite().getRepresentanteLegal());
         tramiteDto.put("dni", insp.getTramite().getDni());
+        
+        java.util.Map<String, Object> solicitanteDto = new java.util.HashMap<>();
+        if (insp.getTramite().getSolicitante() != null) {
+            solicitanteDto.put("email", insp.getTramite().getSolicitante().getEmail());
+        } else {
+            solicitanteDto.put("email", "Desconocido");
+        }
+        tramiteDto.put("solicitante", solicitanteDto);
+        
         tramiteDto.put("area", insp.getTramite().getArea());
         tramiteDto.put("tipo", insp.getTramite().getTipo());
         tramiteDto.put("observacionesGenerales", insp.getTramite().getObservacionesGenerales());

@@ -129,6 +129,7 @@ public class TramiteController {
     public ResponseEntity<TramiteResponse> crearTramite(
             @RequestParam("ruc") String ruc,
             @RequestParam("representanteLegal") String representanteLegal,
+            @RequestParam("rubro") String rubro,
             @RequestParam("dni") String dni,
             @RequestParam("area") java.math.BigDecimal area,
             @RequestParam("tipo") TipoTramite tipo,
@@ -138,7 +139,7 @@ public class TramiteController {
         if (fotos != null && fotos.size() > 4) {
             throw new RuntimeException("Solo se permite un máximo de 4 fotos.");
         }
-        return ResponseEntity.ok(tramiteService.crearTramite(ruc, representanteLegal, dni, area, tipo, plano, fotos));
+        return ResponseEntity.ok(tramiteService.crearTramite(ruc, representanteLegal, rubro, dni, area, tipo, plano, fotos));
     }
 
     @PostMapping("/{ruc}/pagar")

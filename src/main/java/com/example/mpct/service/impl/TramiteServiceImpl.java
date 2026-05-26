@@ -29,7 +29,7 @@ public class TramiteServiceImpl implements TramiteService {
     private final com.example.mpct.repository.ConfiguracionRepository configuracionRepository;
 
     @Transactional
-    public TramiteResponse crearTramite(String ruc, String representanteLegal, String dni, BigDecimal area, TipoTramite tipo, MultipartFile plano, java.util.List<MultipartFile> fotos) {
+    public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, BigDecimal area, TipoTramite tipo, MultipartFile plano, java.util.List<MultipartFile> fotos) {
         
         if (tramiteRepository.findByRuc(ruc).isPresent()) {
             throw new RuntimeException("Ya existe un trámite asociado a este RUC.");
@@ -66,7 +66,7 @@ public class TramiteServiceImpl implements TramiteService {
                 .representanteLegal(representanteLegal)
                 .dni(dni)
                 .area(area)
-                .rubro(sunatData.rubro())
+                .rubro(rubro)
                 .tipo(tipo)
                 .estado(EstadoTramite.PENDIENTE_PAGO)
                 .montoCobrado(precio)

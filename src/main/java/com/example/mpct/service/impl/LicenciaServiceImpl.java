@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Random;
+import org.springframework.core.io.ClassPathResource;
 
 @Service
 @RequiredArgsConstructor
@@ -73,14 +74,14 @@ public class LicenciaServiceImpl implements LicenciaService {
             context.setVariable("expediente", tramite.getId().toString().substring(0, 8));
             context.setVariable("fechaActual", fechaFormat);
             
-            Path logoPathObj = Paths.get("src/main/resources/static/images/logo.png").toAbsolutePath();
-            Path firmaPathObj = Paths.get("src/main/resources/static/images/firma.png").toAbsolutePath();
-            
             String logoBase64 = "";
             String firmaBase64 = "";
             try {
-                logoBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(logoPathObj));
-                firmaBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(firmaPathObj));
+                ClassPathResource logoRes = new ClassPathResource("static/images/logo.png");
+                ClassPathResource firmaRes = new ClassPathResource("static/images/firma.png");
+                
+                logoBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(logoRes.getInputStream().readAllBytes());
+                firmaBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(firmaRes.getInputStream().readAllBytes());
             } catch (Exception e) {
                 // Ignore si no existen imágenes locales
             }
