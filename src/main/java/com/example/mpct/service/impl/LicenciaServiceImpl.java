@@ -34,11 +34,8 @@ public class LicenciaServiceImpl implements LicenciaService {
     private final TemplateEngine templateEngine;
 
     public byte[] generarCertificadoPorRuc(String ruc) {
-        Tramite tramite = tramiteRepository.findByRuc(ruc)
-                .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
-        Licencia licencia = licenciaRepository.findByTramiteId(tramite.getId())
-                .orElseThrow(() -> new RuntimeException("Licencia no generada para este trámite aún"));
-        return licencia.getPdfArchivo();
+        return licenciaRepository.findPdfArchivoByTramiteRuc(ruc)
+                .orElseThrow(() -> new RuntimeException("Licencia o trámite no encontrado para este RUC"));
     }
 
     public Licencia generarLicencia(Tramite tramite) {

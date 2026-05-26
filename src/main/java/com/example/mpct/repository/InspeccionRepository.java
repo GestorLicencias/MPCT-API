@@ -11,5 +11,6 @@ import java.util.UUID;
 public interface InspeccionRepository extends JpaRepository<Inspeccion, UUID> {
     List<Inspeccion> findByTramiteId(UUID tramiteId);
     List<Inspeccion> findByInspectorId(UUID inspectorId);
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite WHERE i.estado = :estado")
     List<Inspeccion> findByEstado(com.example.mpct.model.enums.EstadoInspeccion estado);
 }
