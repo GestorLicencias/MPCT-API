@@ -26,6 +26,7 @@ public class TramiteServiceImpl implements TramiteService {
     private final PagoRepository pagoRepository;
     private final InspeccionService inspeccionService;
     private final LicenciaRepository licenciaRepository;
+    private final LicenciaService licenciaService;
     private final com.example.mpct.repository.ConfiguracionRepository configuracionRepository;
 
     @Transactional
@@ -34,35 +35,40 @@ public class TramiteServiceImpl implements TramiteService {
         // --- Validación por tipo de trámite (NUEVO vs RENOVACION) ---
         java.util.Optional<Licencia> licenciaPreviaOpt = licenciaRepository.findByTramiteRuc(ruc);
         
-        if (tipo == TipoTramite.RENOVACION) {
-            // Para RENOVACION: debe existir una licencia anterior Y debe estar vencida
+        if (tipo == TipoTramite.RENOVACION || tipo == TipoTramite.MODIFICACION || tipo == TipoTramite.TRASLADO) {
+            // Para estos trámites debe existir una licencia anterior
             if (licenciaPreviaOpt.isEmpty()) {
-                throw new RuntimeException("No se encontró una licencia previa para este RUC. Si es la primera vez, seleccione el tipo 'NUEVO'.");
+                throw new RuntimeException("No se encontró una licencia activa para este RUC. Si es la primera vez, seleccione el tipo 'NUEVO'.");
             }
             Licencia licenciaPrevia = licenciaPreviaOpt.get();
-            if (licenciaPrevia.getFechaVencimiento().isAfter(LocalDateTime.now())) {
-                throw new RuntimeException("La licencia actual aún está vigente (Vence el " + 
-                    licenciaPrevia.getFechaVencimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + 
-                    "). Debe esperar a que venza para poder renovarla.");
+            
+            if (tipo == TipoTramite.RENOVACION) {
+                if (licenciaPrevia.getFechaVencimiento().isAfter(LocalDateTime.now().plusDays(30))) {
+                    throw new RuntimeException("La licencia actual aún está vigente por más de 30 días. Debe esperar a que falte menos de 1 mes para renovarla.");
+                }
+                // Licencia vencida o próxima a vencer encontrada → limpiar trámite y licencia anteriores para crear el nuevo
+                Tramite tramiteAnterior = licenciaPrevia.getTramite();
+                licenciaRepository.delete(licenciaPrevia);
+                tramiteRepository.delete(tramiteAnterior);
+            } else {
+                // MODIFICACION o TRASLADO
+                java.util.Optional<Tramite> existingTramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc);
+                if (existingTramite.isPresent()) {
+                    Tramite t = existingTramite.get();
+                    // Evitar que haya un trámite en curso
+                    if (t.getEstado() != EstadoTramite.APROBADO && t.getEstado() != EstadoTramite.DENEGADO && !t.getId().equals(licenciaPrevia.getTramite().getId())) {
+                        throw new RuntimeException("Ya existe un trámite en curso para este RUC (Estado: " + t.getEstado() + ").");
+                    }
+                }
             }
-            // Licencia vencida encontrada → limpiar trámite y licencia anteriores para crear el nuevo
-            Tramite tramiteAnterior = licenciaPrevia.getTramite();
-            licenciaRepository.delete(licenciaPrevia);
-            tramiteRepository.delete(tramiteAnterior);
         } else {
             // Para NUEVO: NO debe existir ninguna licencia previa
             if (licenciaPreviaOpt.isPresent()) {
                 Licencia licenciaPrevia = licenciaPreviaOpt.get();
-                if (licenciaPrevia.getFechaVencimiento().isAfter(LocalDateTime.now())) {
-                    throw new RuntimeException("El RUC ya cuenta con una licencia activa (Vence el " + 
-                        licenciaPrevia.getFechaVencimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + 
-                        "). No puede solicitar una nueva licencia.");
-                } else {
-                    throw new RuntimeException("El RUC tiene una licencia vencida. Debe seleccionar el tipo 'RENOVACIÓN' en lugar de 'NUEVO'.");
-                }
+                throw new RuntimeException("El RUC ya cuenta con una licencia. Debe seleccionar otro tipo de trámite.");
             }
             // Para NUEVO sin licencia previa: verificar que no haya un trámite en curso
-            java.util.Optional<Tramite> existingTramite = tramiteRepository.findByRuc(ruc);
+            java.util.Optional<Tramite> existingTramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc);
             if (existingTramite.isPresent()) {
                 Tramite t = existingTramite.get();
                 if (t.getEstado() == EstadoTramite.DENEGADO) {
@@ -75,22 +81,36 @@ public class TramiteServiceImpl implements TramiteService {
 
         SunatRucResponse sunatData = sunatScrapingService.validarRuc(ruc);
 
-        byte[] planoBytes;
+        byte[] planoBytes = null;
         byte[] fotoBytes = null;
         byte[] foto2Bytes = null;
         byte[] foto3Bytes = null;
         byte[] foto4Bytes = null;
 
-        try {
-            planoBytes = plano.getBytes();
-            if (fotos != null && !fotos.isEmpty()) {
-                fotoBytes = fotos.get(0).getBytes();
-                if (fotos.size() > 1) foto2Bytes = fotos.get(1).getBytes();
-                if (fotos.size() > 2) foto3Bytes = fotos.get(2).getBytes();
-                if (fotos.size() > 3) foto4Bytes = fotos.get(3).getBytes();
+        String finalDomicilio = sunatData.domicilioFiscal();
+        BigDecimal finalArea = area;
+
+        if (tipo == TipoTramite.RENOVACION) {
+            Tramite anterior = licenciaPreviaOpt.get().getTramite();
+            planoBytes = anterior.getArchivoPlano();
+            fotoBytes = anterior.getArchivoFoto();
+            foto2Bytes = anterior.getArchivoFoto2();
+            foto3Bytes = anterior.getArchivoFoto3();
+            foto4Bytes = anterior.getArchivoFoto4();
+            finalArea = anterior.getArea();
+            finalDomicilio = anterior.getDomicilioFiscal();
+        } else {
+            try {
+                if (plano != null) planoBytes = plano.getBytes();
+                if (fotos != null && !fotos.isEmpty()) {
+                    fotoBytes = fotos.get(0).getBytes();
+                    if (fotos.size() > 1) foto2Bytes = fotos.get(1).getBytes();
+                    if (fotos.size() > 2) foto3Bytes = fotos.get(2).getBytes();
+                    if (fotos.size() > 3) foto4Bytes = fotos.get(3).getBytes();
+                }
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Error al leer los archivos: " + e.getMessage());
             }
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("Error al leer los archivos: " + e.getMessage());
         }
 
         BigDecimal precio = configuracionRepository.findByClave("PRECIO_LICENCIA")
@@ -100,10 +120,10 @@ public class TramiteServiceImpl implements TramiteService {
         Tramite tramite = Tramite.builder()
                 .ruc(ruc)
                 .razonSocial(sunatData.razonSocial())
-                .domicilioFiscal(sunatData.domicilioFiscal())
+                .domicilioFiscal(finalDomicilio)
                 .representanteLegal(representanteLegal)
                 .dni(dni)
-                .area(area)
+                .area(finalArea)
                 .rubro(rubro)
                 .tipo(tipo)
                 .estado(EstadoTramite.PENDIENTE_PAGO)
@@ -113,6 +133,7 @@ public class TramiteServiceImpl implements TramiteService {
                 .archivoFoto2(foto2Bytes)
                 .archivoFoto3(foto3Bytes)
                 .archivoFoto4(foto4Bytes)
+                .requiereInspeccion(tipo == TipoTramite.MODIFICACION || tipo == TipoTramite.TRASLADO)
                 .build();
 
         tramite = tramiteRepository.save(tramite);
@@ -121,7 +142,7 @@ public class TramiteServiceImpl implements TramiteService {
 
     @Transactional(readOnly = true)
     public TramiteResponse obtenerTramitePorRuc(String ruc) {
-        Tramite tramite = tramiteRepository.findByRuc(ruc)
+        Tramite tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("No se encontró trámite para el RUC: " + ruc));
         return mapToResponse(tramite);
     }
@@ -129,7 +150,7 @@ public class TramiteServiceImpl implements TramiteService {
     @Override
     @Transactional
     public TramiteResponse actualizarArchivos(String ruc, MultipartFile plano, MultipartFile foto, MultipartFile foto2, MultipartFile foto3, MultipartFile foto4) {
-        Tramite tramite = tramiteRepository.findByRuc(ruc)
+        Tramite tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
 
         if (tramite.getEstado() != EstadoTramite.OBSERVADO) {
@@ -166,7 +187,7 @@ public class TramiteServiceImpl implements TramiteService {
 
     @Transactional
     public TramiteResponse pagarTramite(String ruc, String metodoPago, MultipartFile voucher, String transactionId) {
-        Tramite tramite = tramiteRepository.findByRuc(ruc)
+        Tramite tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
 
         if (tramite.getEstado() != EstadoTramite.PENDIENTE_PAGO) {
@@ -183,9 +204,13 @@ public class TramiteServiceImpl implements TramiteService {
             pago.setPasarelaTransactionId(transactionId);
             pago.setEstadoPago("COMPLETADO");
             pagoRepository.save(pago);
-            tramite.setEstado(EstadoTramite.PAGADO);
+            if (tramite.getRequiereInspeccion()) {
+                tramite.setEstado(EstadoTramite.PENDIENTE_REVISION);
+            } else {
+                tramite.setEstado(EstadoTramite.PAGADO);
+                inspeccionService.programarInspeccionInicial(tramite);
+            }
             tramiteRepository.save(tramite);
-            inspeccionService.programarInspeccionInicial(tramite);
         } else if ("BANCO_NACION".equals(metodoPago) && voucher != null) {
             pago.setEstadoPago("PENDIENTE");
             try {
@@ -194,12 +219,42 @@ public class TramiteServiceImpl implements TramiteService {
                 throw new RuntimeException("Error guardando el voucher");
             }
             pagoRepository.save(pago);
-            tramite.setEstado(EstadoTramite.VALIDANDO_PAGO);
+            if (tramite.getRequiereInspeccion()) {
+                tramite.setEstado(EstadoTramite.PENDIENTE_REVISION);
+            } else {
+                tramite.setEstado(EstadoTramite.VALIDANDO_PAGO);
+            }
             tramiteRepository.save(tramite);
         } else {
             throw new RuntimeException("Método de pago inválido o falta voucher");
         }
 
+        return mapToResponse(tramite);
+    }
+
+    @Transactional
+    public TramiteResponse aprobarTramiteRevision(String ruc) {
+        Tramite tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
+                .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
+
+        if (tramite.getEstado() != EstadoTramite.PENDIENTE_REVISION) {
+            throw new RuntimeException("El trámite no está en estado PENDIENTE_REVISION");
+        }
+
+        tramite.setEstado(EstadoTramite.APROBADO);
+        tramiteRepository.save(tramite);
+        
+        // Cambiar la licencia anterior a HISTORICA (si existe)
+        java.util.Optional<Licencia> licenciaPreviaOpt = licenciaRepository.findByTramiteRuc(ruc);
+        if (licenciaPreviaOpt.isPresent()) {
+            Licencia licenciaPrevia = licenciaPreviaOpt.get();
+            licenciaPrevia.setEstado(com.example.mpct.model.enums.EstadoLicencia.HISTORICA);
+            licenciaRepository.save(licenciaPrevia);
+        }
+
+        // Generar la nueva licencia
+        licenciaService.generarLicencia(tramite);
+        
         return mapToResponse(tramite);
     }
 

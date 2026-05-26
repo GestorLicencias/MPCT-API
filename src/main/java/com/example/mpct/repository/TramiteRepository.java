@@ -11,6 +11,6 @@ import java.util.UUID;
 
 @Repository
 public interface TramiteRepository extends JpaRepository<Tramite, UUID> {
-    Optional<Tramite> findByRuc(String ruc);
+    Optional<Tramite> findTopByRucOrderByCreatedAtDesc(String ruc);
     List<Tramite> findByEstado(EstadoTramite estado);
 }

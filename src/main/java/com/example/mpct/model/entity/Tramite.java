@@ -104,4 +104,8 @@ public class Tramite {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean requiereInspeccion = false;
 }

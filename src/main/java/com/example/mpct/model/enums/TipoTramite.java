@@ -2,5 +2,7 @@ package com.example.mpct.model.enums;
 
 public enum TipoTramite {
     NUEVO,
-    RENOVACION
+    RENOVACION,
+    MODIFICACION,
+    TRASLADO
 }

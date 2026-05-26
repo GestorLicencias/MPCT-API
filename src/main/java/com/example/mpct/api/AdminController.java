@@ -22,6 +22,7 @@ public class AdminController {
     private final com.example.mpct.repository.PagoRepository pagoRepository;
     private final com.example.mpct.repository.TramiteRepository tramiteRepository;
     private final com.example.mpct.service.InspeccionService inspeccionService;
+    private final com.example.mpct.service.TramiteService tramiteService;
 
     @GetMapping("/configuraciones")
     @PreAuthorize("hasRole('ADMIN')")
@@ -65,11 +66,15 @@ public class AdminController {
 
         if (aprobado) {
             pago.setEstadoPago("COMPLETADO");
-            tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PAGADO);
+            if (tramite.getRequiereInspeccion()) {
+                tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION);
+            } else {
+                tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PAGADO);
+                inspeccionService.programarInspeccionInicial(tramite);
+            }
             pagoRepository.save(pago);
             tramiteRepository.save(tramite);
-            inspeccionService.programarInspeccionInicial(tramite);
-            return ResponseEntity.ok(new MessageResponse("Pago aprobado y trámite pagado."));
+            return ResponseEntity.ok(new MessageResponse("Pago aprobado. " + (tramite.getRequiereInspeccion() ? "Trámite pendiente de revisión." : "Trámite pagado.")));
         } else {
             pago.setEstadoPago("RECHAZADO");
             tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO);
@@ -77,6 +82,20 @@ public class AdminController {
             tramiteRepository.save(tramite);
             return ResponseEntity.ok(new MessageResponse("Pago rechazado. Trámite devuelto a pendiente de pago."));
         }
+    }
+
+    @PostMapping("/tramites/{ruc}/aprobar-revision")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSPECTOR')")
+    public ResponseEntity<?> aprobarTramiteRevision(@PathVariable String ruc) {
+        // En un flujo real, quizás el inspector lo aprueba.
+        // Aquí llamamos al servicio que cambia el estado y emite la licencia.
+        return ResponseEntity.ok(tramiteService.aprobarTramiteRevision(ruc));
+    }
+
+    @GetMapping("/tramites/revision")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSPECTOR')")
+    public ResponseEntity<?> getTramitesEnRevision() {
+        return ResponseEntity.ok(tramiteRepository.findByEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION));
     }
 
     @PutMapping("/configuraciones/{clave}")

@@ -9,4 +9,5 @@ public interface TramiteService {
     TramiteResponse obtenerTramitePorRuc(String ruc);
     TramiteResponse actualizarArchivos(String ruc, MultipartFile plano, MultipartFile foto, MultipartFile foto2, MultipartFile foto3, MultipartFile foto4);
     TramiteResponse pagarTramite(String ruc, String metodoPago, MultipartFile voucher, String transactionId);
+    TramiteResponse aprobarTramiteRevision(String ruc);
 }

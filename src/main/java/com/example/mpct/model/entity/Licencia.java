@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import com.example.mpct.model.enums.EstadoLicencia;
 
 @Entity
 @Table(name = "licencias")
@@ -41,4 +42,9 @@ public class Licencia {
 
     @Column
     private String codigoCatastral;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private EstadoLicencia estado = EstadoLicencia.ACTIVA;
 }

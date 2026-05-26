@@ -30,7 +30,7 @@ public class TramiteController {
     @PostMapping("/{ruc}/mercadopago")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<java.util.Map<String, String>> generarPreferenciaMercadoPago(@PathVariable String ruc) {
-        var tramite = tramiteRepository.findByRuc(ruc)
+        var tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
         
         if (tramite.getEstado() != com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO) {
@@ -71,21 +71,21 @@ public class TramiteController {
 
     @GetMapping("/{ruc}/archivos/plano")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<byte[]> verPlano(@PathVariable String ruc) {
-        var tramite = tramiteRepository.findByRuc(ruc)
+    public ResponseEntity<byte[]> verPlano(@PathVariable String ruc, @RequestParam(value = "download", defaultValue = "false") boolean download) {
+        var tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
-        return serveFile(tramite.getArchivoPlano(), "plano.pdf");
+        return serveFile(tramite.getArchivoPlano(), "plano.pdf", download);
     }
 
     @GetMapping("/{ruc}/archivos/foto")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<byte[]> verFoto(@PathVariable String ruc) {
-        var tramite = tramiteRepository.findByRuc(ruc)
+    public ResponseEntity<byte[]> verFoto(@PathVariable String ruc, @RequestParam(value = "download", defaultValue = "false") boolean download) {
+        var tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
-        return serveFile(tramite.getArchivoFoto(), "foto.jpg");
+        return serveFile(tramite.getArchivoFoto(), "foto.jpg", download);
     }
 
-    private ResponseEntity<byte[]> serveFile(byte[] fileBytes, String defaultName) {
+    private ResponseEntity<byte[]> serveFile(byte[] fileBytes, String defaultName, boolean download) {
         if (fileBytes == null) {
             return ResponseEntity.notFound().build();
         }
@@ -96,33 +96,36 @@ public class TramiteController {
             mediaType = org.springframework.http.MediaType.IMAGE_JPEG;
         }
 
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .body(fileBytes);
+        org.springframework.http.ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok().contentType(mediaType);
+        if (download) {
+            responseBuilder.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + defaultName + "\"");
+        }
+
+        return responseBuilder.body(fileBytes);
     }
 
     @GetMapping("/{ruc}/archivos/foto2")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<byte[]> verFoto2(@PathVariable String ruc) {
-        var tramite = tramiteRepository.findByRuc(ruc)
+    public ResponseEntity<byte[]> verFoto2(@PathVariable String ruc, @RequestParam(value = "download", defaultValue = "false") boolean download) {
+        var tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
-        return serveFile(tramite.getArchivoFoto2(), "foto2.jpg");
+        return serveFile(tramite.getArchivoFoto2(), "foto2.jpg", download);
     }
 
     @GetMapping("/{ruc}/archivos/foto3")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<byte[]> verFoto3(@PathVariable String ruc) {
-        var tramite = tramiteRepository.findByRuc(ruc)
+    public ResponseEntity<byte[]> verFoto3(@PathVariable String ruc, @RequestParam(value = "download", defaultValue = "false") boolean download) {
+        var tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
-        return serveFile(tramite.getArchivoFoto3(), "foto3.jpg");
+        return serveFile(tramite.getArchivoFoto3(), "foto3.jpg", download);
     }
 
     @GetMapping("/{ruc}/archivos/foto4")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<byte[]> verFoto4(@PathVariable String ruc) {
-        var tramite = tramiteRepository.findByRuc(ruc)
+    public ResponseEntity<byte[]> verFoto4(@PathVariable String ruc, @RequestParam(value = "download", defaultValue = "false") boolean download) {
+        var tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
-        return serveFile(tramite.getArchivoFoto4(), "foto4.jpg");
+        return serveFile(tramite.getArchivoFoto4(), "foto4.jpg", download);
     }
 
     @PostMapping
