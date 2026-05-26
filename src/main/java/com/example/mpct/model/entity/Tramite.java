@@ -40,14 +40,14 @@ public class Tramite {
     @Column(nullable = false)
     private String rubro;
 
-    @Column(nullable = false, length = 8)
+    @Column(nullable = true, length = 8)
     private String dni;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = true, precision = 10, scale = 2)
     private BigDecimal area;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private TipoTramite tipo;
 
     @Enumerated(EnumType.STRING)
