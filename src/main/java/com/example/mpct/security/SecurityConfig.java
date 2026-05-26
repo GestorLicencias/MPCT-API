@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/tramites/**").permitAll()
                 .requestMatchers("/api/v1/pagos/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/v1/admin/tramites/revision", "/api/v1/admin/tramites/*/aprobar-revision").hasAnyRole("ADMIN", "INSPECTOR")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/inspector/**").hasAnyRole("ADMIN", "INSPECTOR")
                 .anyRequest().authenticated()
