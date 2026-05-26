@@ -11,5 +11,4 @@ import java.util.UUID;
 public interface LicenciaRepository extends JpaRepository<Licencia, UUID> {
     Optional<Licencia> findByTramiteId(UUID tramiteId);
     Optional<Licencia> findByNumeroLicencia(String numeroLicencia);
-    boolean existsByTramite_Solicitante_IdAndFechaVencimientoAfter(UUID solicitanteId, java.time.LocalDateTime date);
 }

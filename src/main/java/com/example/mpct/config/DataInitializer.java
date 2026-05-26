@@ -1,10 +1,9 @@
 package com.example.mpct.config;
 
 import com.example.mpct.model.entity.User;
-import com.example.mpct.model.entity.UserProfile;
 import com.example.mpct.model.enums.Role;
-import com.example.mpct.repository.UserProfileRepository;
 import com.example.mpct.repository.UserRepository;
+import com.example.mpct.repository.ConfiguracionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,9 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
-    private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
-    private final com.example.mpct.repository.ConfiguracionRepository configuracionRepository;
+    private final ConfiguracionRepository configuracionRepository;
+    private final com.example.mpct.repository.TramiteRepository tramiteRepository;
+    private final com.example.mpct.service.InspeccionService inspeccionService;
 
     @Override
     @Transactional
@@ -32,15 +32,6 @@ public class DataInitializer implements CommandLineRunner {
                     .isActive(true)
                     .build();
             userRepository.save(admin);
-            
-            UserProfile adminProfile = UserProfile.builder()
-                    .user(admin)
-                    .ruc("00000000001")
-                    .razonSocial("MUNICIPALIDAD PROVINCIAL - ADMIN")
-                    .domicilioFiscal("Palacio Municipal")
-                    .representanteLegal("Alcalde")
-                    .build();
-            userProfileRepository.save(adminProfile);
         }
 
         // Crear Inspector por defecto si no existe
@@ -52,34 +43,25 @@ public class DataInitializer implements CommandLineRunner {
                     .isActive(true)
                     .build();
             userRepository.save(inspector);
-
-            UserProfile inspectorProfile = UserProfile.builder()
-                    .user(inspector)
-                    .ruc("00000000002")
-                    .razonSocial("MUNICIPALIDAD PROVINCIAL - INSPECTOR")
-                    .domicilioFiscal("Área de Fiscalización")
-                    .representanteLegal("Jefe de Inspecciones")
-                    .build();
-            userProfileRepository.save(inspectorProfile);
         }
 
         // Inicializar Configuraciones base
-        if (configuracionRepository.findByClave("PRECIO_NUEVO").isEmpty()) {
-            com.example.mpct.model.entity.Configuracion confNuevo = com.example.mpct.model.entity.Configuracion.builder()
-                    .clave("PRECIO_NUEVO")
-                    .valor(new java.math.BigDecimal("380.00"))
-                    .descripcion("Precio base para trámite Nuevo")
-                    .build();
-            configuracionRepository.save(confNuevo);
-        }
-        
-        if (configuracionRepository.findByClave("PRECIO_RENOVACION").isEmpty()) {
-            com.example.mpct.model.entity.Configuracion confRenovacion = com.example.mpct.model.entity.Configuracion.builder()
-                    .clave("PRECIO_RENOVACION")
+        if (configuracionRepository.findByClave("PRECIO_LICENCIA").isEmpty()) {
+            com.example.mpct.model.entity.Configuracion confLicencia = com.example.mpct.model.entity.Configuracion.builder()
+                    .clave("PRECIO_LICENCIA")
                     .valor(new java.math.BigDecimal("180.00"))
-                    .descripcion("Precio base para trámite Renovación")
+                    .descripcion("Precio base para la Licencia de Funcionamiento")
                     .build();
-            configuracionRepository.save(confRenovacion);
+            configuracionRepository.save(confLicencia);
+        }
+
+        // AUTO-FIX: Migrar trámites PAGADOS que no tengan inspección (por el bug anterior)
+        java.util.List<com.example.mpct.model.entity.Tramite> tramitesPagados = tramiteRepository.findByEstado(com.example.mpct.model.enums.EstadoTramite.PAGADO);
+        for (com.example.mpct.model.entity.Tramite t : tramitesPagados) {
+            if (t.getInspecciones() == null || t.getInspecciones().isEmpty()) {
+                System.out.println("Auto-Fixing: Programando inspección faltante para RUC " + t.getRuc());
+                inspeccionService.programarInspeccionInicial(t);
+            }
         }
     }
 }

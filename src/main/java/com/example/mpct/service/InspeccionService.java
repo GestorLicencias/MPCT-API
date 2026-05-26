@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface InspeccionService {
     Inspeccion programarInspeccionInicial(Tramite tramite);
-    Inspeccion evaluarInspeccion(User inspector, UUID inspeccionId, boolean conforme, String observaciones);
+    Inspeccion evaluarInspeccion(User inspector, UUID inspeccionId, boolean conforme, String observaciones, String archivosObservados);
     java.util.List<Inspeccion> obtenerInspeccionesPendientes();
     Inspeccion obtenerInspeccionPorId(UUID id);
 }

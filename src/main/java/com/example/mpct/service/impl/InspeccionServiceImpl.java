@@ -37,8 +37,9 @@ public class InspeccionServiceImpl implements InspeccionService {
         return inspeccionRepository.save(inspeccion);
     }
 
+    @Override
     @Transactional
-    public Inspeccion evaluarInspeccion(User inspector, UUID inspeccionId, boolean conforme, String observaciones) {
+    public Inspeccion evaluarInspeccion(User inspector, UUID inspeccionId, boolean conforme, String observaciones, String archivosObservados) {
         Inspeccion inspeccion = inspeccionRepository.findById(inspeccionId)
                 .orElseThrow(() -> new RuntimeException("Inspección no encontrada"));
 
@@ -48,19 +49,24 @@ public class InspeccionServiceImpl implements InspeccionService {
 
         inspeccion.setInspector(inspector);
         inspeccion.setFechaRealizada(LocalDateTime.now());
+        inspeccion.setObservaciones(observaciones);
 
         Tramite tramite = inspeccion.getTramite();
 
         if (conforme) {
             inspeccion.setEstado(EstadoInspeccion.CONFORME);
             tramite.setEstado(EstadoTramite.APROBADO);
+            tramite.setObservacionesGenerales(null);
+            tramite.setArchivosObservados(null);
             
             // Generar licencia automáticamente
             licenciaService.generarLicencia(tramite);
             
         } else {
             inspeccion.setEstado(EstadoInspeccion.OBSERVADA);
-            inspeccion.setObservaciones(observaciones);
+            tramite.setEstado(EstadoTramite.OBSERVADO);
+            tramite.setObservacionesGenerales(observaciones);
+            tramite.setArchivosObservados(archivosObservados);
             
             if (inspeccion.getNumeroInspeccion() == 1) {
                 tramite.setEstado(EstadoTramite.OBSERVADO);

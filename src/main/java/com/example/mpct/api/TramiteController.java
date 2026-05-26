@@ -2,18 +2,13 @@ package com.example.mpct.api;
 
 import com.example.mpct.dto.tramite.TramiteResponse;
 import com.example.mpct.model.enums.TipoTramite;
-import com.example.mpct.model.entity.User;
-import com.example.mpct.repository.UserRepository;
 import com.example.mpct.service.TramiteService;
+import com.example.mpct.service.LicenciaService;
+import com.example.mpct.repository.TramiteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/tramites")
@@ -21,53 +16,70 @@ import java.util.UUID;
 public class TramiteController {
 
     private final TramiteService tramiteService;
-    private final UserRepository userRepository;
+    private final LicenciaService licenciaService;
+    private final TramiteRepository tramiteRepository;
     private final com.example.mpct.service.MercadoPagoService mercadoPagoService;
-    private final com.example.mpct.repository.TramiteRepository tramiteRepository;
-    private final com.example.mpct.repository.LicenciaRepository licenciaRepository;
+    private final com.example.mpct.service.DniScrapingService dniScrapingService;
 
-    @org.springframework.beans.factory.annotation.Value("${app.storage.path:./uploads}")
-    private String storagePath;
+    @GetMapping("/dni/{dni}")
+    public ResponseEntity<java.util.Map<String, String>> consultarDni(@PathVariable String dni) {
+        String nombreCompleto = dniScrapingService.obtenerNombresPorDni(dni);
+        return ResponseEntity.ok(java.util.Map.of("nombreCompleto", nombreCompleto));
+    }
 
-    @GetMapping("/{id}/licencia/pdf")
-    @PreAuthorize("hasAnyRole('SOLICITANTE', 'INSPECTOR', 'ADMIN')")
-    public ResponseEntity<byte[]> descargarLicenciaPorTramite(@PathVariable UUID id) {
-        User user = getCurrentUser();
-        var tramite = tramiteRepository.findById(id)
+    @PostMapping("/{ruc}/mercadopago")
+    public ResponseEntity<java.util.Map<String, String>> generarPreferenciaMercadoPago(@PathVariable String ruc) {
+        var tramite = tramiteRepository.findByRuc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
-
-        if (!tramite.getSolicitante().getId().equals(user.getId()) && 
-            !user.getRole().name().equals("ADMIN") && 
-            !user.getRole().name().equals("INSPECTOR")) {
-            throw new RuntimeException("No tiene permisos para ver esta licencia");
+        
+        if (tramite.getEstado() != com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO) {
+            throw new RuntimeException("El trámite no está pendiente de pago");
         }
 
-        var licencia = licenciaRepository.findByTramiteId(id)
-                .orElseThrow(() -> new RuntimeException("Licencia no generada para este trámite aún"));
+        String initPoint = mercadoPagoService.crearPreferenciaPago(tramite);
+        return ResponseEntity.ok(java.util.Map.of("initPoint", initPoint));
+    }
 
-        byte[] pdfBytes = licencia.getPdfArchivo();
-        if (pdfBytes == null) {
-            throw new RuntimeException("El archivo de la licencia no está disponible.");
+    @PostMapping("/webhook/mercadopago")
+    public ResponseEntity<?> recibirWebhookMercadoPago(
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "data.id", required = false) String dataId,
+            @RequestBody(required = false) String payload) {
+        
+        // MercadoPago envía notificaciones de varios tipos. Solo nos interesa 'payment'
+        if ("payment".equals(type) && dataId != null) {
+            mercadoPagoService.procesarWebhook(dataId);
         }
+        return ResponseEntity.ok().build(); // Siempre responder 200 OK para que MP deje de enviar la notificación
+    }
 
+    @GetMapping("/{ruc}")
+    public ResponseEntity<TramiteResponse> obtenerTramite(@PathVariable String ruc) {
+        return ResponseEntity.ok(tramiteService.obtenerTramitePorRuc(ruc));
+    }
+
+    @GetMapping("/{ruc}/certificado")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> descargarCertificado(@PathVariable String ruc) {
+        byte[] pdfBytes = licenciaService.generarCertificadoPorRuc(ruc);
         return ResponseEntity.ok()
                 .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
-                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + licencia.getNumeroLicencia() + ".pdf\"")
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-" + ruc + ".pdf\"")
                 .body(pdfBytes);
     }
 
-    @GetMapping("/{id}/archivos/plano")
-    @PreAuthorize("hasAnyRole('SOLICITANTE', 'INSPECTOR', 'ADMIN')")
-    public ResponseEntity<byte[]> verPlano(@PathVariable UUID id) {
-        var tramite = tramiteRepository.findById(id)
+    @GetMapping("/{ruc}/archivos/plano")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> verPlano(@PathVariable String ruc) {
+        var tramite = tramiteRepository.findByRuc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
         return serveFile(tramite.getArchivoPlano(), "plano.pdf");
     }
 
-    @GetMapping("/{id}/archivos/foto")
-    @PreAuthorize("hasAnyRole('SOLICITANTE', 'INSPECTOR', 'ADMIN')")
-    public ResponseEntity<byte[]> verFoto(@PathVariable UUID id) {
-        var tramite = tramiteRepository.findById(id)
+    @GetMapping("/{ruc}/archivos/foto")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> verFoto(@PathVariable String ruc) {
+        var tramite = tramiteRepository.findByRuc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
         return serveFile(tramite.getArchivoFoto(), "foto.jpg");
     }
@@ -76,7 +88,6 @@ public class TramiteController {
         if (fileBytes == null) {
             return ResponseEntity.notFound().build();
         }
-        // Determinar tipo mime simple por defecto
         org.springframework.http.MediaType mediaType = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
         if (defaultName.endsWith(".pdf")) {
             mediaType = org.springframework.http.MediaType.APPLICATION_PDF;
@@ -89,64 +100,65 @@ public class TramiteController {
                 .body(fileBytes);
     }
 
-    @PostMapping("/{id}/preferencia")
-    @PreAuthorize("hasRole('SOLICITANTE')")
-    public ResponseEntity<java.util.Map<String, String>> generarPreferenciaPago(@PathVariable UUID id) {
-        User user = getCurrentUser();
-        var tramite = tramiteRepository.findById(id)
+    @GetMapping("/{ruc}/archivos/foto2")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> verFoto2(@PathVariable String ruc) {
+        var tramite = tramiteRepository.findByRuc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
+        return serveFile(tramite.getArchivoFoto2(), "foto2.jpg");
+    }
 
-        if (!tramite.getSolicitante().getId().equals(user.getId())) {
-            throw new RuntimeException("No tiene permisos sobre este trámite");
-        }
+    @GetMapping("/{ruc}/archivos/foto3")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> verFoto3(@PathVariable String ruc) {
+        var tramite = tramiteRepository.findByRuc(ruc)
+                .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
+        return serveFile(tramite.getArchivoFoto3(), "foto3.jpg");
+    }
 
-        if (tramite.getEstado() != com.example.mpct.model.enums.EstadoTramite.PENDIENTE) {
-            throw new RuntimeException("El trámite no está pendiente de pago");
-        }
-
-        String initPoint = mercadoPagoService.crearPreferenciaPago(tramite);
-        return ResponseEntity.ok(java.util.Map.of("url", initPoint));
+    @GetMapping("/{ruc}/archivos/foto4")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> verFoto4(@PathVariable String ruc) {
+        var tramite = tramiteRepository.findByRuc(ruc)
+                .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
+        return serveFile(tramite.getArchivoFoto4(), "foto4.jpg");
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SOLICITANTE')")
     public ResponseEntity<TramiteResponse> crearTramite(
+            @RequestParam("ruc") String ruc,
+            @RequestParam("representanteLegal") String representanteLegal,
+            @RequestParam("dni") String dni,
+            @RequestParam("area") java.math.BigDecimal area,
             @RequestParam("tipo") TipoTramite tipo,
-            @RequestParam(value = "declaracionSinCambios", required = false) Boolean declaracionSinCambios,
-            @RequestParam("area") Double area,
             @RequestParam("plano") MultipartFile plano,
-            @RequestParam("foto") MultipartFile foto
+            @RequestParam("fotos") java.util.List<MultipartFile> fotos
     ) {
-        return ResponseEntity.ok(tramiteService.crearTramite(getCurrentUser(), tipo, declaracionSinCambios, area, plano, foto));
+        if (fotos != null && fotos.size() > 4) {
+            throw new RuntimeException("Solo se permite un máximo de 4 fotos.");
+        }
+        return ResponseEntity.ok(tramiteService.crearTramite(ruc, representanteLegal, dni, area, tipo, plano, fotos));
     }
 
-    @PostMapping("/{id}/pagar")
-    @PreAuthorize("hasRole('SOLICITANTE')")
+    @PostMapping("/{ruc}/pagar")
     public ResponseEntity<TramiteResponse> pagarTramite(
-            @PathVariable UUID id,
-            @RequestParam("transactionId") String transactionId
+            @PathVariable String ruc,
+            @RequestParam("metodoPago") String metodoPago,
+            @RequestParam(value = "voucher", required = false) MultipartFile voucher,
+            @RequestParam(value = "transactionId", required = false) String transactionId
     ) {
-        return ResponseEntity.ok(tramiteService.pagarTramite(getCurrentUser(), id, transactionId));
+        return ResponseEntity.ok(tramiteService.pagarTramite(ruc, metodoPago, voucher, transactionId));
     }
 
-    @PutMapping("/{id}/archivos")
-    @PreAuthorize("hasRole('SOLICITANTE')")
+    @PatchMapping("/{ruc}/archivos")
     public ResponseEntity<TramiteResponse> actualizarArchivos(
-            @PathVariable UUID id,
+            @PathVariable String ruc,
             @RequestParam(value = "plano", required = false) MultipartFile plano,
-            @RequestParam(value = "foto", required = false) MultipartFile foto
+            @RequestParam(value = "foto", required = false) MultipartFile foto,
+            @RequestParam(value = "foto2", required = false) MultipartFile foto2,
+            @RequestParam(value = "foto3", required = false) MultipartFile foto3,
+            @RequestParam(value = "foto4", required = false) MultipartFile foto4
     ) {
-        return ResponseEntity.ok(tramiteService.actualizarArchivos(getCurrentUser(), id, plano, foto));
-    }
-
-    @GetMapping
-    @PreAuthorize("hasRole('SOLICITANTE')")
-    public ResponseEntity<List<TramiteResponse>> misTramites() {
-        return ResponseEntity.ok(tramiteService.misTramites(getCurrentUser()));
-    }
-
-    private User getCurrentUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuario no autenticado"));
+        return ResponseEntity.ok(tramiteService.actualizarArchivos(ruc, plano, foto, foto2, foto3, foto4));
     }
 }

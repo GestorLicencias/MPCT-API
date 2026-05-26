@@ -16,11 +16,67 @@ import java.util.List;
 public class AdminController {
 
     private final ConfiguracionRepository configuracionRepository;
+    private final com.example.mpct.repository.UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    private final com.example.mpct.repository.PagoRepository pagoRepository;
+    private final com.example.mpct.repository.TramiteRepository tramiteRepository;
+    private final com.example.mpct.service.InspeccionService inspeccionService;
 
     @GetMapping("/configuraciones")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Configuracion>> getAllConfiguraciones() {
         return ResponseEntity.ok(configuracionRepository.findAll());
+    }
+
+    @GetMapping("/pagos/pendientes")
+    @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<List<com.example.mpct.dto.pago.PagoResponse>> getPagosPendientes() {
+        List<com.example.mpct.model.entity.Pago> pagos = pagoRepository.findByEstadoPago("PENDIENTE");
+        List<com.example.mpct.dto.pago.PagoResponse> response = pagos.stream().map(p -> new com.example.mpct.dto.pago.PagoResponse(
+                p.getId(), p.getTramite().getRuc(), p.getTramite().getRazonSocial(), p.getMonto(),
+                p.getMetodoPago(), p.getEstadoPago(), p.getFechaPago()
+        )).toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/pagos/{id}/voucher")
+    @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> getVoucher(@PathVariable java.util.UUID id) {
+        com.example.mpct.model.entity.Pago pago = pagoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
+        if (pago.getArchivoVoucher() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.IMAGE_JPEG)
+                .body(pago.getArchivoVoucher());
+    }
+
+    @PostMapping("/pagos/{id}/validar")
+    @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> validarPago(@PathVariable java.util.UUID id, @RequestParam("aprobado") boolean aprobado) {
+        com.example.mpct.model.entity.Pago pago = pagoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
+        com.example.mpct.model.entity.Tramite tramite = pago.getTramite();
+
+        if (aprobado) {
+            pago.setEstadoPago("COMPLETADO");
+            tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PAGADO);
+            pagoRepository.save(pago);
+            tramiteRepository.save(tramite);
+            inspeccionService.programarInspeccionInicial(tramite);
+            return ResponseEntity.ok(new MessageResponse("Pago aprobado y trámite pagado."));
+        } else {
+            pago.setEstadoPago("RECHAZADO");
+            tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO);
+            pagoRepository.save(pago);
+            tramiteRepository.save(tramite);
+            return ResponseEntity.ok(new MessageResponse("Pago rechazado. Trámite devuelto a pendiente de pago."));
+        }
     }
 
     @PutMapping("/configuraciones/{clave}")
@@ -35,4 +91,25 @@ public class AdminController {
         conf.setValor(valor);
         return ResponseEntity.ok(configuracionRepository.save(conf));
     }
+
+    @PostMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> registerInspector(@jakarta.validation.Valid @RequestBody com.example.mpct.dto.auth.RegisterRequest request) {
+        if (userRepository.findByEmail(request.email()).isPresent()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("El correo electrónico ya está en uso."));
+        }
+
+        com.example.mpct.model.entity.User user = com.example.mpct.model.entity.User.builder()
+                .email(request.email())
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .role(com.example.mpct.model.enums.Role.INSPECTOR)
+                .isActive(true)
+                .build();
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new MessageResponse("Inspector registrado exitosamente."));
+    }
+    
+    public record MessageResponse(String message) {}
 }

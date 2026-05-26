@@ -1,16 +1,12 @@
 package com.example.mpct.service;
 
 import com.example.mpct.dto.tramite.TramiteResponse;
-import com.example.mpct.model.entity.User;
 import com.example.mpct.model.enums.TipoTramite;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.UUID;
-
 public interface TramiteService {
-    TramiteResponse crearTramite(User user, TipoTramite tipo, Boolean declaracionSinCambios, Double area, MultipartFile plano, MultipartFile foto);
-    TramiteResponse pagarTramite(User user, UUID tramiteId, String mockTransactionId);
-    TramiteResponse actualizarArchivos(User user, UUID tramiteId, MultipartFile plano, MultipartFile foto);
-    List<TramiteResponse> misTramites(User user);
+    TramiteResponse crearTramite(String ruc, String representanteLegal, String dni, java.math.BigDecimal area, TipoTramite tipo, MultipartFile plano, java.util.List<MultipartFile> fotos);
+    TramiteResponse obtenerTramitePorRuc(String ruc);
+    TramiteResponse actualizarArchivos(String ruc, MultipartFile plano, MultipartFile foto, MultipartFile foto2, MultipartFile foto3, MultipartFile foto4);
+    TramiteResponse pagarTramite(String ruc, String metodoPago, MultipartFile voucher, String transactionId);
 }

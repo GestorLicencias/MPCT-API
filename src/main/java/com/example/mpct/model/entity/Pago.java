@@ -30,7 +30,20 @@ public class Pago {
     private BigDecimal monto;
 
     @Column(nullable = false)
+    private String metodoPago; // MERCADO_PAGO, BANCO_NACION
+
+    @Column(nullable = false)
+    private String estadoPago; // PENDIENTE, COMPLETADO, RECHAZADO
+
+    @Column(nullable = true)
     private String pasarelaTransactionId;
+
+    @Column(nullable = true)
+    private String archivoVoucherUrl;
+
+    @Lob
+    @Column(nullable = true)
+    private byte[] archivoVoucher;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

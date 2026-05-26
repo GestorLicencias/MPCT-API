@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface PagoRepository extends JpaRepository<Pago, UUID> {
     Optional<Pago> findByTramiteId(UUID tramiteId);
+    java.util.List<Pago> findByEstadoPago(String estadoPago);
 }

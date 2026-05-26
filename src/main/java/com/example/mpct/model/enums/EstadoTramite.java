@@ -1,10 +1,11 @@
 package com.example.mpct.model.enums;
 
 public enum EstadoTramite {
-    PENDIENTE,
+    PENDIENTE_PAGO,
+    VALIDANDO_PAGO,
     PAGADO,
     OBSERVADO,
+    SUBSANADO,
     APROBADO,
-    DENEGADO,
-    VENCIDO
+    DENEGADO
 }

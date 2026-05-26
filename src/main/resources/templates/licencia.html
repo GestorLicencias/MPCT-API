@@ -1,475 +1,389 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Licencia de Funcionamiento - MPCT</title>
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  <meta charset="UTF-8" />
+  <title>Licencia de Funcionamiento - MPCT</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  body {
-    background: #c8c8c8;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 30px 20px;
-    font-family: 'Crimson Text', serif;
-  }
+    body {
+      background: #c8c8c8;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px 20px;
+      font-family: 'Crimson Text', Georgia, serif;
+    }
 
-  .document {
-    width: 680px;
-    background: #e8f0f7;
-    border: 2px solid #4a7ab5;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-  }
+    .document {
+      width: 680px;
+      background: #e8f0f7;
+      border: 2px solid #4a7ab5;
+      position: relative;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
 
-  /* Watermark background pattern */
-  .document::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      repeating-linear-gradient(45deg, rgba(100,150,200,0.04) 0px, rgba(100,150,200,0.04) 1px, transparent 1px, transparent 20px),
-      repeating-linear-gradient(-45deg, rgba(100,150,200,0.04) 0px, rgba(100,150,200,0.04) 1px, transparent 1px, transparent 20px);
-    pointer-events: none;
-    z-index: 0;
-  }
+    /* Patron de fondo sutil - sin imagen, solo CSS */
+    .document::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+              repeating-linear-gradient(45deg, rgba(100,150,200,0.04) 0px, rgba(100,150,200,0.04) 1px, transparent 1px, transparent 20px),
+              repeating-linear-gradient(-45deg, rgba(100,150,200,0.04) 0px, rgba(100,150,200,0.04) 1px, transparent 1px, transparent 20px);
+      pointer-events: none;
+    }
 
-  /* Watermark dragon logo */
-  .watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 420px;
-    height: 420px;
-    opacity: 0.07;
-    pointer-events: none;
-    z-index: 0;
-  }
+    .top-stripe {
+      background: linear-gradient(135deg, #1a4a8a 0%, #2563b8 50%, #1a4a8a 100%);
+      height: 8px;
+      width: 100%;
+    }
 
-  .watermark img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 16px 24px 12px;
+      border-bottom: 1px solid #4a7ab5;
+      background: rgba(232, 240, 247, 0.9);
+      gap: 16px;
+    }
 
-  /* Blue stripe top */
-  .top-stripe {
-    background: linear-gradient(135deg, #1a4a8a 0%, #2563b8 50%, #1a4a8a 100%);
-    height: 8px;
-    width: 100%;
-  }
+    .header-logo {
+      width: 90px;
+      height: 90px;
+      flex-shrink: 0;
+    }
 
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    padding: 16px 24px 12px;
-    border-bottom: 1px solid #4a7ab5;
-    position: relative;
-    z-index: 1;
-    background: rgba(232, 240, 247, 0.9);
-    gap: 16px;
-  }
+    .header-logo img {
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+    }
 
-  .header-logo {
-    width: 90px;
-    height: 90px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+    .header-title {
+      flex: 1;
+      text-align: center;
+    }
 
-  .header-logo img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+    .header-title h1 {
+      font-size: 22px;
+      color: #1a3a6e;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      line-height: 1.2;
+      font-weight: bold;
+    }
 
-  .header-title {
-    flex: 1;
-    text-align: center;
-  }
+    .header-spacer {
+      width: 90px;
+      flex-shrink: 0;
+    }
 
-  .header-title h1 {
-    font-family: 'IM Fell English', serif;
-    font-size: 22px;
-    color: #1a3a6e;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    line-height: 1.2;
-    text-shadow: 0 1px 2px rgba(255,255,255,0.5);
-  }
+    .body {
+      padding: 18px 36px;
+    }
 
-  .header-spacer {
-    width: 90px;
-    flex-shrink: 0;
-  }
+    .doc-title {
+      text-align: center;
+      margin-bottom: 6px;
+    }
 
-  /* Body */
-  .body {
-    padding: 18px 36px;
-    position: relative;
-    z-index: 1;
-  }
+    .doc-title h2 {
+      font-size: 15px;
+      color: #1a3a6e;
+      font-weight: normal;
+      letter-spacing: 1px;
+    }
 
-  .doc-title {
-    text-align: center;
-    margin-bottom: 6px;
-  }
+    .doc-title p {
+      font-size: 13px;
+      color: #333;
+      margin-top: 2px;
+    }
 
-  .doc-title h2 {
-    font-family: 'IM Fell English', serif;
-    font-size: 15px;
-    color: #1a3a6e;
-    font-weight: normal;
-    letter-spacing: 1px;
-  }
+    .divider {
+      border: none;
+      border-top: 1px solid #4a7ab5;
+      margin: 10px 0;
+    }
 
-  .doc-title p {
-    font-size: 13px;
-    color: #333;
-    margin-top: 2px;
-  }
+    .legal-text {
+      font-size: 12.5px;
+      color: #222;
+      line-height: 1.5;
+      margin-bottom: 10px;
+      text-align: justify;
+    }
 
-  .divider {
-    border: none;
-    border-top: 1px solid #4a7ab5;
-    margin: 10px 0;
-  }
+    .section-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #1a3a6e;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
 
-  .legal-text {
-    font-size: 12.5px;
-    color: #222;
-    line-height: 1.5;
-    margin-bottom: 10px;
-    text-align: justify;
-  }
+    .fields-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+    }
 
-  .section-title {
-    font-family: 'IM Fell English', serif;
-    font-size: 14px;
-    font-weight: bold;
-    color: #1a3a6e;
-    margin-bottom: 8px;
-    letter-spacing: 0.5px;
-  }
+    .fields-table tr td {
+      padding: 3px 4px;
+      font-size: 12.5px;
+      vertical-align: top;
+      color: #111;
+    }
 
-  .fields-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 14px;
-  }
+    .fields-table tr td:first-child {
+      color: #333;
+      width: 38%;
+      padding-right: 8px;
+    }
 
-  .fields-table tr td {
-    padding: 3px 4px;
-    font-size: 12.5px;
-    vertical-align: top;
-    color: #111;
-  }
+    .fields-table tr td:last-child {
+      font-weight: bold;
+      color: #0a1f4e;
+    }
 
-  .fields-table tr td:first-child {
-    color: #333;
-    width: 38%;
-    padding-right: 8px;
-    white-space: nowrap;
-  }
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 12px;
+      margin-bottom: 14px;
+    }
 
-  .fields-table tr td:first-child::after {
-    content: ' :';
-  }
+    .date-text {
+      font-size: 12.5px;
+      color: #333;
+      padding-bottom: 4px;
+    }
 
-  .fields-table tr td:last-child {
-    font-weight: 600;
-    color: #0a1f4e;
-  }
+    .signature-block {
+      text-align: center;
+      min-width: 200px;
+    }
 
-  /* Date and signature row */
-  .footer-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-top: 12px;
-    margin-bottom: 14px;
-  }
+    /* Firma: imagen directa en base64, sin círculo ni decoración */
+    .signature-img {
+      width: 180px;
+      height: 80px;
+      margin: 0 auto 4px;
+      text-align: center;
+    }
 
-  .date-text {
-    font-size: 12.5px;
-    color: #333;
-    align-self: flex-end;
-    padding-bottom: 4px;
-  }
+    .signature-img img {
+      width: 180px;
+      height: 80px;
+      object-fit: contain;
+    }
 
-  .signature-block {
-    text-align: center;
-    min-width: 200px;
-  }
+    .signature-line {
+      border-top: 1px solid #333;
+      width: 180px;
+      margin: 4px auto 2px;
+    }
 
-  .signature-stamp {
-    width: 110px;
-    height: 90px;
-    border: 2px solid #1a4a8a;
-    border-radius: 50%;
-    margin: 0 auto 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(26,74,138,0.06);
-    position: relative;
-    overflow: hidden;
-  }
+    .signature-name {
+      font-size: 11.5px;
+      font-weight: bold;
+      color: #0a1f4e;
+      font-style: italic;
+    }
 
-  .signature-stamp-inner {
-    text-align: center;
-    padding: 6px;
-  }
+    .signature-role {
+      font-size: 11px;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-  .signature-stamp-inner .stamp-title {
-    font-size: 7px;
-    color: #1a4a8a;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    line-height: 1.3;
-  }
+    .prohibitions {
+      border: 1px solid #4a7ab5;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      background: rgba(255,255,255,0.3);
+    }
 
-  .signature-stamp-inner .stamp-seal {
-    font-size: 18px;
-    color: #1a4a8a;
-    opacity: 0.5;
-    margin: 2px 0;
-  }
+    .prohibitions h3 {
+      font-size: 12px;
+      font-weight: bold;
+      color: #1a3a6e;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-  .signature-line {
-    border-top: 1px solid #333;
-    width: 180px;
-    margin: 4px auto 2px;
-  }
+    .prohibitions p {
+      font-size: 11.5px;
+      color: #333;
+    }
 
-  .signature-name {
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #0a1f4e;
-    font-style: italic;
-  }
+    .mandatory-notice {
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #1a3a6e;
+      border-top: 1px solid #4a7ab5;
+      border-bottom: 1px solid #4a7ab5;
+      padding: 6px 0;
+      letter-spacing: 0.5px;
+    }
 
-  .signature-role {
-    font-size: 11px;
-    color: #444;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+    .bottom-bar {
+      background: #1a4a8a;
+      display: flex;
+      align-items: center;
+      padding: 0;
+    }
 
-  /* Prohibitions */
-  .prohibitions {
-    border: 1px solid #4a7ab5;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-    background: rgba(255,255,255,0.3);
-  }
+    .bottom-number {
+      background: #fff;
+      color: #1a3a6e;
+      font-size: 16px;
+      padding: 6px 14px;
+      letter-spacing: 2px;
+      border-right: 2px solid #1a4a8a;
+      font-weight: bold;
+    }
 
-  .prohibitions h3 {
-    font-size: 12px;
-    font-weight: bold;
-    color: #1a3a6e;
-    margin-bottom: 3px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+    .bottom-logo-text {
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      padding: 0 14px;
+      letter-spacing: 1px;
+    }
 
-  .prohibitions p {
-    font-size: 11.5px;
-    color: #333;
-  }
+    .bottom-divisions {
+      display: flex;
+      margin-left: auto;
+    }
 
-  /* Mandatory notice */
-  .mandatory-notice {
-    text-align: center;
-    font-size: 12px;
-    font-weight: bold;
-    color: #1a3a6e;
-    border-top: 1px solid #4a7ab5;
-    border-bottom: 1px solid #4a7ab5;
-    padding: 6px 0;
-    letter-spacing: 0.5px;
-    margin-bottom: 0;
-  }
+    .bottom-div-1 {
+      background: #2563b8;
+      padding: 6px 14px;
+      color: #fff;
+      font-size: 10px;
+      text-align: center;
+      line-height: 1.3;
+      font-weight: bold;
+      border-left: 1px solid rgba(255,255,255,0.3);
+    }
 
-  /* Bottom bar */
-  .bottom-bar {
-    background: #1a4a8a;
-    display: flex;
-    align-items: center;
-    padding: 0;
-    margin-top: 0;
-  }
-
-  .bottom-number {
-    background: #fff;
-    color: #1a3a6e;
-    font-family: 'IM Fell English', serif;
-    font-size: 16px;
-    padding: 6px 14px;
-    letter-spacing: 2px;
-    border-right: 2px solid #1a4a8a;
-    font-weight: bold;
-  }
-
-  .bottom-logo-text {
-    color: #fff;
-    font-family: 'IM Fell English', serif;
-    font-size: 20px;
-    font-weight: bold;
-    padding: 0 14px;
-    letter-spacing: 1px;
-  }
-
-  .bottom-divisions {
-    display: flex;
-    margin-left: auto;
-  }
-
-  .bottom-div-1 {
-    background: #2563b8;
-    padding: 6px 14px;
-    color: #fff;
-    font-size: 10px;
-    text-align: center;
-    line-height: 1.3;
-    font-family: 'Crimson Text', serif;
-    font-weight: 600;
-    border-left: 1px solid rgba(255,255,255,0.3);
-  }
-
-  .bottom-div-2 {
-    background: #f5a623;
-    padding: 6px 14px;
-    color: #0a1f4e;
-    font-size: 10px;
-    text-align: center;
-    line-height: 1.3;
-    font-family: 'Crimson Text', serif;
-    font-weight: 700;
-  }
-
-  @media print {
-    body { background: white; padding: 0; }
-    .document { box-shadow: none; }
-  }
-</style>
+    .bottom-div-2 {
+      background: #f5a623;
+      padding: 6px 14px;
+      color: #0a1f4e;
+      font-size: 10px;
+      text-align: center;
+      line-height: 1.3;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
 <div class="document">
 
-  <!-- Dragon watermark -->
-  <div class="watermark">
-    <img th:src="${logoPath}" alt="Escudo">
-  </div>
-
   <div class="top-stripe"></div>
 
-  <!-- Header -->
+  <!-- Header: logo en base64 via ${logoPath}, SIN watermark de fondo -->
   <div class="header">
     <div class="header-logo">
-      <img th:src="${logoPath}" alt="Logo MPCT">
+      <img th:src="${logoPath}" alt="Logo MPCT" />
     </div>
     <div class="header-title">
-      <h1>Municipalidad Provincial<br>Coimera Tangamandapio</h1>
+      <h1>Municipalidad Provincial<br/>Coimera Tangamandapio</h1>
     </div>
     <div class="header-spacer"></div>
   </div>
 
-  <!-- Body -->
   <div class="body">
 
     <div class="doc-title">
-      <h2>Licencia de Funcionamiento –</h2>
-      <p th:text="'Nro. ' + ${licencia.numeroLicencia} + ' - 2026 MPCT-GDEL-SGLC'">Nro. 001079 - 2026 MPCT-GDEL-SGLC</p>
+      <h2>Licencia de Funcionamiento &#8211;</h2>
+      <p th:text="'Nro. ' + ${licencia.numeroLicencia} + ' - 2026 MPCT-GDEL-SGLC'">Nro. LIC-001 - 2026 MPCT-GDEL-SGLC</p>
       <p>Ley Nro. 28976</p>
     </div>
 
-    <hr class="divider">
+    <hr class="divider" />
 
     <p class="legal-text">
-      En uso de las Facultades conferidas mediante Resolución Gerencial N° 1261-2013-MPCT-GDEL, la
-      Ordenanza Municipal Nro 031-2013-MPCT y la Ley Orgánica de Municipalidades.
+      En uso de las Facultades conferidas mediante Resoluci&#243;n Gerencial N&#176; 1261-2013-MPCT-GDEL, la
+      Ordenanza Municipal Nro 031-2013-MPCT y la Ley Org&#225;nica de Municipalidades.
     </p>
 
     <div class="section-title">CONCEDE A:</div>
 
     <table class="fields-table">
       <tr>
-        <td>Titular</td>
-        <td th:text="${titular}">"Aqui pones al Titular"</td>
+        <td>Titular :</td>
+        <td th:text="${titular}">Nombre del Titular</td>
       </tr>
       <tr>
-        <td>Doc. de Identidad</td>
-        <td th:text="${ruc}">"Aqui pones el Ruc"</td>
+        <td>Doc. de Identidad :</td>
+        <td th:text="${ruc}">RUC</td>
       </tr>
       <tr>
-        <td>Representante Legal</td>
-        <td th:text="${representante}">"Aqui El Representante"</td>
+        <td>Representante Legal :</td>
+        <td th:text="${representante}">Representante Legal</td>
       </tr>
       <tr>
-        <td>Doc. de Identidad</td>
-        <td th:text="${dni}">"DNI"</td>
+        <td>Doc. de Identidad :</td>
+        <td th:text="${dni}">DNI</td>
       </tr>
       <tr>
-        <td>Nombre Comercial</td>
-        <td th:text="${titular}">"Aqui el Nombre comercial"</td>
+        <td>Nombre Comercial :</td>
+        <td th:text="${titular}">Nombre Comercial</td>
       </tr>
       <tr>
-        <td>Dirección</td>
-        <td th:text="${direccion}">"Aqui la direccion"</td>
+        <td>Direcci&#243;n :</td>
+        <td th:text="${direccion}">Direcci&#243;n</td>
       </tr>
       <tr>
-        <td>Código Catastral</td>
-        <td th:text="${codigoCatastral}">"inventas asignado por el Estado a una propiedad o terreno".</td>
+        <td>C&#243;digo Catastral :</td>
+        <td th:text="${codigoCatastral}">C&#243;digo Catastral</td>
       </tr>
       <tr>
-        <td>Giro</td>
-        <td th:text="${giro}">" Aqui pones el giro. ".</td>
+        <td>Giro :</td>
+        <td th:text="${giro}">Giro</td>
       </tr>
       <tr>
-        <td>Zonificación</td>
+        <td>Zonificaci&#243;n :</td>
         <td>CM</td>
       </tr>
       <tr>
-        <td>Área</td>
-        <td th:text="${area} + ' m2'">"Aqui el area"</td>
+        <td>&#193;rea :</td>
+        <td th:text="${area} + ' m²'">&#193;rea m&#178;</td>
       </tr>
       <tr>
-        <td>Visto el Expediente</td>
-        <td th:text="${expediente}">14445 - 2026 - MPCT - 1</td>
+        <td>Visto el Expediente :</td>
+        <td th:text="${expediente}">Expediente</td>
       </tr>
     </table>
 
     <div class="footer-content">
-      <div class="date-text" th:text="'Coimera Tangamandapio, ' + ${fechaActual}">Coimera Tangamandapio, "24 de Mayo del 2026(aqui pondrias con la fecha del dia que se genera)"</div>
+      <div class="date-text" th:text="'Coimera Tangamandapio, ' + ${fechaActual}">
+        Coimera Tangamandapio, 25 de mayo del 2026
+      </div>
 
       <div class="signature-block">
-        <div class="signature-stamp">
-          <div class="signature-stamp-inner">
-            <div class="stamp-title">MUNICIPALIDAD PROVINCIAL<br>COIMERA TANGAMANDAPIO<br>SUBGERENCIA DE<br>LICENCIAS Y<br>COMERCIALIZACIÓN</div>
-            <div class="stamp-seal">
-              <img th:src="${firmaPath}" alt="Firma" style="width:100%;height:100%;object-fit:contain;">
-            </div>
-          </div>
+        <!-- FIRMA en base64 via ${firmaPath} - sin circulo, sin dragon -->
+        <div class="signature-img">
+          <img th:src="${firmaPath}" alt="Firma" />
         </div>
         <div class="signature-line"></div>
-        <div class="signature-name">Mg. Sebastián Chávez Acevedo</div>
+        <div class="signature-name">Mg. Sebasti&#225;n Ch&#225;vez Acevedo</div>
         <div class="signature-role">Sub - Gerente</div>
       </div>
     </div>
 
     <div class="prohibitions">
       <h3>Prohibiciones al Establecimiento</h3>
-      <p>Prohibido el uso de la Vía Pública y Área de Retiro</p>
+      <p>Prohibido el uso de la V&#237;a P&#250;blica y &#193;rea de Retiro</p>
     </div>
 
     <div class="mandatory-notice">
@@ -478,13 +392,12 @@
 
   </div>
 
-  <!-- Bottom bar -->
   <div class="bottom-bar">
-    <div class="bottom-number" th:text="'N° &nbsp; ' + ${licencia.numeroLicencia}">N° &nbsp; "04592 numeros random que no se repitan"</div>
+    <div class="bottom-number" th:text="'N&#176;  ' + ${licencia.numeroLicencia}">N&#176; LIC-0001</div>
     <div class="bottom-logo-text">MPCT</div>
     <div class="bottom-divisions">
-      <div class="bottom-div-1">Gerencia de Desarrollo<br>Económico</div>
-      <div class="bottom-div-2">Subgerencia de Licencias<br>y Comercialización</div>
+      <div class="bottom-div-1">Gerencia de Desarrollo<br/>Econ&#243;mico</div>
+      <div class="bottom-div-2">Subgerencia de Licencias<br/>y Comercializaci&#243;n</div>
     </div>
   </div>
 
