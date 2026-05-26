@@ -28,6 +28,7 @@ public class TramiteController {
     }
 
     @PostMapping("/{ruc}/mercadopago")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<java.util.Map<String, String>> generarPreferenciaMercadoPago(@PathVariable String ruc) {
         var tramite = tramiteRepository.findByRuc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
