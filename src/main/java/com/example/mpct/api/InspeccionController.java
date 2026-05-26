@@ -72,11 +72,7 @@ public class InspeccionController {
         tramiteDto.put("dni", insp.getTramite().getDni());
         
         java.util.Map<String, Object> solicitanteDto = new java.util.HashMap<>();
-        if (insp.getTramite().getSolicitante() != null) {
-            solicitanteDto.put("email", insp.getTramite().getSolicitante().getEmail());
-        } else {
-            solicitanteDto.put("email", "Desconocido");
-        }
+        solicitanteDto.put("email", insp.getTramite().getRuc() + "@tramite.com"); // Dummy email para que el frontend no de error
         tramiteDto.put("solicitante", solicitanteDto);
         
         tramiteDto.put("area", insp.getTramite().getArea());
