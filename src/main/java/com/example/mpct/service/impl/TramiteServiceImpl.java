@@ -31,8 +31,25 @@ public class TramiteServiceImpl implements TramiteService {
     @Transactional
     public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, BigDecimal area, TipoTramite tipo, MultipartFile plano, java.util.List<MultipartFile> fotos) {
         
-        if (tramiteRepository.findByRuc(ruc).isPresent()) {
-            throw new RuntimeException("Ya existe un trámite asociado a este RUC.");
+        java.util.Optional<Tramite> existingTramite = tramiteRepository.findByRuc(ruc);
+        if (existingTramite.isPresent()) {
+            Tramite t = existingTramite.get();
+            java.util.Optional<Licencia> licenciaOpt = licenciaRepository.findByTramiteId(t.getId());
+            if (licenciaOpt.isPresent()) {
+                Licencia lic = licenciaOpt.get();
+                if (lic.getFechaVencimiento().isAfter(java.time.LocalDateTime.now())) {
+                    throw new RuntimeException("El RUC cuenta con una licencia de funcionamiento activa (Vence el " + 
+                        lic.getFechaVencimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + 
+                        "). No puede gestionar un nuevo trámite hasta que expire.");
+                } else {
+                    licenciaRepository.delete(lic);
+                    tramiteRepository.delete(t);
+                }
+            } else if (t.getEstado() == EstadoTramite.DENEGADO) {
+                tramiteRepository.delete(t);
+            } else {
+                throw new RuntimeException("Ya existe un trámite en curso para este RUC (Estado: " + t.getEstado() + ").");
+            }
         }
 
         SunatRucResponse sunatData = sunatScrapingService.validarRuc(ruc);
