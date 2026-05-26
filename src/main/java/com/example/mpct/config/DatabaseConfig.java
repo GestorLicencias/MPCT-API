@@ -15,9 +15,10 @@ public class DatabaseConfig {
     public void fixEnumConstraints() {
         try {
             jdbcTemplate.execute("ALTER TABLE tramites DROP CONSTRAINT IF EXISTS tramites_tipo_check");
-            System.out.println("Constraint tramites_tipo_check eliminado correctamente.");
+            jdbcTemplate.execute("ALTER TABLE tramites DROP CONSTRAINT IF EXISTS tramites_estado_check");
+            System.out.println("Constraints de enums eliminados correctamente.");
         } catch (Exception e) {
-            System.out.println("No se pudo eliminar el constraint tramites_tipo_check: " + e.getMessage());
+            System.out.println("No se pudieron eliminar los constraints: " + e.getMessage());
         }
     }
 }
