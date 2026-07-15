@@ -13,4 +13,10 @@ public interface InspeccionRepository extends JpaRepository<Inspeccion, UUID> {
     List<Inspeccion> findByInspectorId(UUID inspectorId);
     @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite WHERE i.estado = :estado")
     List<Inspeccion> findByEstado(com.example.mpct.model.enums.EstadoInspeccion estado);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(i) FROM Inspeccion i WHERE i.inspector.id = :inspectorId AND CAST(i.fechaProgramada AS date) = CAST(:fecha AS date)")
+    long countByInspectorIdAndFechaProgramada(@org.springframework.data.repository.query.Param("inspectorId") java.util.UUID inspectorId, @org.springframework.data.repository.query.Param("fecha") java.time.LocalDateTime fecha);
+
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite WHERE i.inspector.id = :inspectorId AND i.estado = :estado AND CAST(i.fechaProgramada AS date) = CAST(:fecha AS date)")
+    List<Inspeccion> findByInspectorIdAndEstadoAndFechaProgramada(@org.springframework.data.repository.query.Param("inspectorId") java.util.UUID inspectorId, @org.springframework.data.repository.query.Param("estado") com.example.mpct.model.enums.EstadoInspeccion estado, @org.springframework.data.repository.query.Param("fecha") java.time.LocalDateTime fecha);
 }

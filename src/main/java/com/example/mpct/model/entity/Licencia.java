@@ -46,5 +46,5 @@ public class Licencia {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private EstadoLicencia estado = EstadoLicencia.ACTIVA;
+    private EstadoLicencia estado = EstadoLicencia.VIGENTE;
 }

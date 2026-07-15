@@ -23,6 +23,8 @@ public class AdminController {
     private final com.example.mpct.repository.TramiteRepository tramiteRepository;
     private final com.example.mpct.service.InspeccionService inspeccionService;
     private final com.example.mpct.service.TramiteService tramiteService;
+    private final com.example.mpct.service.AuthService authService;
+    private final com.example.mpct.repository.CajaRepository cajaRepository;
 
     @GetMapping("/configuraciones")
     @PreAuthorize("hasRole('ADMIN')")
@@ -39,6 +41,38 @@ public class AdminController {
                 p.getId(), p.getTramite().getRuc(), p.getTramite().getRazonSocial(), p.getMonto(),
                 p.getMetodoPago(), p.getEstadoPago(), p.getFechaPago()
         )).toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/caja/cierres")
+    @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<?> getReporteCierres() {
+        
+        List<com.example.mpct.model.entity.Caja> cajas = cajaRepository.findAll();
+        cajas = cajas.stream()
+                .filter(c -> c.getEstado() == com.example.mpct.model.enums.EstadoCaja.CERRADA)
+                .sorted((a, b) -> b.getFechaCierre().compareTo(a.getFechaCierre()))
+                .toList();
+
+        List<java.util.Map<String, Object>> response = cajas.stream().map(c -> {
+            java.math.BigDecimal declarado = c.getMontoDeclarado() != null ? c.getMontoDeclarado() : c.getMontoFinal();
+            java.math.BigDecimal esperado = c.getMontoFinal();
+            java.math.BigDecimal diferencia = declarado.subtract(esperado);
+            
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("cajaId", c.getId());
+            map.put("usuario", c.getUsuario().getEmail());
+            map.put("fechaApertura", c.getFechaApertura().toString());
+            map.put("fechaCierre", c.getFechaCierre() != null ? c.getFechaCierre().toString() : "");
+            map.put("montoInicial", c.getMontoInicial());
+            map.put("montoEsperado", esperado);
+            map.put("montoDeclarado", declarado);
+            map.put("diferencia", diferencia);
+            
+            return map;
+        }).toList();
+
         return ResponseEntity.ok(response);
     }
 
@@ -111,23 +145,38 @@ public class AdminController {
         return ResponseEntity.ok(configuracionRepository.save(conf));
     }
 
+    @PutMapping("/change-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> changePassword(@jakarta.validation.Valid @RequestBody com.example.mpct.dto.auth.ChangePasswordRequest request, java.security.Principal principal) {
+        try {
+            authService.changePassword(principal.getName(), request);
+            return ResponseEntity.ok(new MessageResponse("Contraseña actualizada exitosamente."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
     @PostMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> registerInspector(@jakarta.validation.Valid @RequestBody com.example.mpct.dto.auth.RegisterRequest request) {
+    public ResponseEntity<?> createUser(@jakarta.validation.Valid @RequestBody com.example.mpct.dto.auth.CreateUserRequest request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
             return ResponseEntity.badRequest().body(new MessageResponse("El correo electrónico ya está en uso."));
+        }
+
+        if (request.role() == com.example.mpct.model.enums.Role.ADMIN) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Solo se pueden crear cuentas de INSPECTOR o CAJERO por esta vía."));
         }
 
         com.example.mpct.model.entity.User user = com.example.mpct.model.entity.User.builder()
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
-                .role(com.example.mpct.model.enums.Role.INSPECTOR)
+                .role(request.role())
                 .isActive(true)
                 .build();
 
         userRepository.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("Inspector registrado exitosamente."));
+        return ResponseEntity.ok(new MessageResponse("Usuario registrado exitosamente."));
     }
     
     public record MessageResponse(String message) {}

@@ -15,6 +15,7 @@ public record TramiteResponse(
         String representanteLegal,
         String rubro,
         String dni,
+        String email,
         BigDecimal area,
         TipoTramite tipo,
         EstadoTramite estado,

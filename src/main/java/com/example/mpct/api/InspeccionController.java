@@ -24,7 +24,7 @@ public class InspeccionController {
     @PreAuthorize("hasRole('INSPECTOR')")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<java.util.List<java.util.Map<String, Object>>> getInspeccionesPendientes() {
-        var inspecciones = inspeccionService.obtenerInspeccionesPendientes();
+        var inspecciones = inspeccionService.obtenerInspeccionesDelDia(getCurrentUser());
         var dtos = inspecciones.stream().map(this::mapInspeccionToDto).toList();
         return ResponseEntity.ok(dtos);
     }

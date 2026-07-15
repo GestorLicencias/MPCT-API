@@ -100,20 +100,50 @@ public class LicenciaServiceImpl implements LicenciaService {
             renderer.createPDF(pdfOutputStream);
             byte[] pdfBytes = pdfOutputStream.toByteArray();
 
-            Licencia licencia = Licencia.builder()
-                    .tramite(tramite)
-                    .numeroLicencia(numLicencia)
-                    .codigoCatastral(codigoCatastral)
-                    .qrData(qrContent)
-                    .pdfArchivo(pdfBytes)
-                    .fechaEmision(fechaEmision)
-                    .fechaVencimiento(fechaVencimiento)
-                    .build();
+            Licencia licencia;
+            java.util.Optional<Licencia> licenciaExistenteOpt = licenciaRepository.findByTramiteRuc(tramite.getRuc());
+
+            if (tramite.getTipo() == com.example.mpct.model.enums.TipoTramite.RENOVACION && licenciaExistenteOpt.isPresent()) {
+                licencia = licenciaExistenteOpt.get();
+                // Update existing license
+                fechaVencimiento = licencia.getFechaVencimiento().plusYears(1);
+                
+                // Re-render PDF with new dates and attach new tramite
+                context.setVariable("fechaActual", LocalDateTime.now().format(formatter));
+                context.setVariable("licencia", licencia);
+                html = templateEngine.process("licencia", context);
+                
+                ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
+                ITextRenderer rendererUpdate = new ITextRenderer();
+                rendererUpdate.setDocumentFromString(html);
+                rendererUpdate.layout();
+                rendererUpdate.createPDF(pdfOut);
+                
+                licencia.setTramite(tramite);
+                licencia.setEstado(com.example.mpct.model.enums.EstadoLicencia.VIGENTE);
+                licencia.setFechaVencimiento(fechaVencimiento);
+                licencia.setPdfArchivo(pdfOut.toByteArray());
+                
+            } else {
+                licencia = Licencia.builder()
+                        .tramite(tramite)
+                        .numeroLicencia(numLicencia)
+                        .codigoCatastral(codigoCatastral)
+                        .qrData(qrContent)
+                        .pdfArchivo(pdfBytes)
+                        .fechaEmision(fechaEmision)
+                        .fechaVencimiento(fechaVencimiento)
+                        .build();
+            }
 
             return licenciaRepository.save(licencia);
 
         } catch (Exception e) {
             throw new RuntimeException("Error al generar Licencia PDF: " + e.getMessage(), e);
         }
+    }
+
+    public java.util.Optional<Licencia> obtenerPorNumero(String numeroLicencia) {
+        return licenciaRepository.findByNumeroLicencia(numeroLicencia);
     }
 }

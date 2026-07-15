@@ -10,5 +10,6 @@ public interface InspeccionService {
     Inspeccion programarInspeccionInicial(Tramite tramite);
     Inspeccion evaluarInspeccion(User inspector, UUID inspeccionId, boolean conforme, String observaciones, String archivosObservados);
     java.util.List<Inspeccion> obtenerInspeccionesPendientes();
+    java.util.List<Inspeccion> obtenerInspeccionesDelDia(User inspector);
     Inspeccion obtenerInspeccionPorId(UUID id);
 }

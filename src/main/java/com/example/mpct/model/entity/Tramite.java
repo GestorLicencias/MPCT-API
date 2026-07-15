@@ -42,6 +42,9 @@ public class Tramite {
 
     @Column(nullable = true, length = 8)
     private String dni;
+    
+    @Column(nullable = true)
+    private String email;
 
     @Column(nullable = true, precision = 10, scale = 2)
     private BigDecimal area;
@@ -92,8 +95,11 @@ public class Tramite {
     @Column(columnDefinition = "TEXT")
     private String observacionesGenerales;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "TEXT")
     private String archivosObservados;
+
+    @Column
+    private LocalDateTime fechaLimiteSubsanacion;
 
     @Column(nullable = false)
     private BigDecimal montoCobrado;

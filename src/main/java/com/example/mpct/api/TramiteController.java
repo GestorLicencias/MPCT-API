@@ -156,6 +156,7 @@ public class TramiteController {
             @RequestParam("representanteLegal") String representanteLegal,
             @RequestParam("rubro") String rubro,
             @RequestParam("dni") String dni,
+            @RequestParam(value = "email", required = false) String email,
             @RequestParam("area") java.math.BigDecimal area,
             @RequestParam("tipo") TipoTramite tipo,
             @RequestParam("plano") MultipartFile plano,
@@ -164,7 +165,7 @@ public class TramiteController {
         if (fotos != null && fotos.size() > 4) {
             throw new RuntimeException("Solo se permite un máximo de 4 fotos.");
         }
-        return ResponseEntity.ok(tramiteService.crearTramite(ruc, representanteLegal, rubro, dni, area, tipo, plano, fotos));
+        return ResponseEntity.ok(tramiteService.crearTramite(ruc, representanteLegal, rubro, dni, email, area, tipo, plano, fotos));
     }
 
     @PostMapping("/{ruc}/pagar")
@@ -172,9 +173,10 @@ public class TramiteController {
             @PathVariable String ruc,
             @RequestParam("metodoPago") String metodoPago,
             @RequestParam(value = "voucher", required = false) MultipartFile voucher,
-            @RequestParam(value = "transactionId", required = false) String transactionId
+            @RequestParam(value = "transactionId", required = false) String transactionId,
+            @RequestParam(value = "numeroComprobante", required = false) String numeroComprobante
     ) {
-        return ResponseEntity.ok(tramiteService.pagarTramite(ruc, metodoPago, voucher, transactionId));
+        return ResponseEntity.ok(tramiteService.pagarTramite(ruc, metodoPago, voucher, transactionId, numeroComprobante));
     }
 
     @PatchMapping("/{ruc}/archivos")
@@ -187,5 +189,27 @@ public class TramiteController {
             @RequestParam(value = "foto4", required = false) MultipartFile foto4
     ) {
         return ResponseEntity.ok(tramiteService.actualizarArchivos(ruc, plano, foto, foto2, foto3, foto4));
+    }
+
+    @GetMapping("/validar/{numeroLicencia}")
+    public ResponseEntity<java.util.Map<String, Object>> validarLicencia(@PathVariable String numeroLicencia) {
+        var licenciaOpt = licenciaService.obtenerPorNumero(numeroLicencia);
+        if (licenciaOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(java.util.Map.of("valida", false, "mensaje", "Licencia no encontrada"));
+        }
+        var licencia = licenciaOpt.get();
+        boolean isVigente = licencia.getEstado() == com.example.mpct.model.enums.EstadoLicencia.VIGENTE;
+        
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("valida", isVigente);
+        data.put("estado", licencia.getEstado().name());
+        data.put("razonSocial", licencia.getTramite().getRazonSocial());
+        data.put("ruc", licencia.getTramite().getRuc());
+        data.put("direccion", licencia.getTramite().getDomicilioFiscal());
+        data.put("rubro", licencia.getTramite().getRubro());
+        data.put("fechaEmision", licencia.getFechaEmision().toString());
+        data.put("fechaVencimiento", licencia.getFechaVencimiento().toString());
+        
+        return ResponseEntity.ok(data);
     }
 }

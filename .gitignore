@@ -34,4 +34,10 @@ build/
 
 # Local credentials
 credenciales-locales.txt
+*.txt
+*.ps1
 .env
+
+# Ignorar configuracion local del agente Antigravity
+.agents/
+mcp.json

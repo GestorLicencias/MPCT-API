@@ -8,5 +8,9 @@ public enum EstadoTramite {
     OBSERVADO,
     SUBSANADO,
     APROBADO,
-    DENEGADO
+    TERMINADO,
+    PROGRAMADO,
+    EN_INSPECCION,
+    EN_SUBSANACION,
+    VENCIDO
 }

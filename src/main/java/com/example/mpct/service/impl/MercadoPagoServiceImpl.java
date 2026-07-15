@@ -4,6 +4,7 @@ import com.example.mpct.model.entity.Tramite;
 import com.example.mpct.model.entity.Pago;
 import com.example.mpct.service.MercadoPagoService;
 import com.example.mpct.service.InspeccionService;
+import com.example.mpct.service.InspeccionSchedulingService;
 import com.example.mpct.repository.TramiteRepository;
 import com.example.mpct.repository.PagoRepository;
 import com.mercadopago.MercadoPagoConfig;
@@ -27,11 +28,13 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
     private final TramiteRepository tramiteRepository;
     private final PagoRepository pagoRepository;
     private final InspeccionService inspeccionService;
+    private final InspeccionSchedulingService inspeccionSchedulingService;
 
-    public MercadoPagoServiceImpl(TramiteRepository tramiteRepository, PagoRepository pagoRepository, InspeccionService inspeccionService) {
+    public MercadoPagoServiceImpl(TramiteRepository tramiteRepository, PagoRepository pagoRepository, InspeccionService inspeccionService, InspeccionSchedulingService inspeccionSchedulingService) {
         this.tramiteRepository = tramiteRepository;
         this.pagoRepository = pagoRepository;
         this.inspeccionService = inspeccionService;
+        this.inspeccionSchedulingService = inspeccionSchedulingService;
     }
 
     @Value("${mercadopago.access.token}")
@@ -130,12 +133,15 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
                 pago.setEstadoPago("COMPLETADO");
                 pago.setFechaPago(java.time.LocalDateTime.now());
                 pagoRepository.save(pago);
-
-                tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PAGADO);
+                if (tramite.getRequiereInspeccion()) {
+                    tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION);
+                } else {
+                    tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PROGRAMADO);
+                    inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+                }
                 tramiteRepository.save(tramite);
-                inspeccionService.programarInspeccionInicial(tramite);
                 
-                System.out.println("Trámite RUC " + tramite.getRuc() + " pagado y enviado a inspección exitosamente.");
+                System.out.println("Trámite RUC " + tramite.getRuc() + " pagado y actualizado exitosamente.");
             }
         } catch (Exception e) {
             System.err.println("Error al procesar el webhook de MercadoPago para paymentId " + paymentId + ": " + e.getMessage());

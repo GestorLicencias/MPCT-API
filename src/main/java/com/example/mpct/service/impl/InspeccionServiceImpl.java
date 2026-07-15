@@ -70,20 +70,10 @@ public class InspeccionServiceImpl implements InspeccionService {
             
             if (inspeccion.getNumeroInspeccion() == 1) {
                 tramite.setEstado(EstadoTramite.OBSERVADO);
-                // Programar 2da inspección para exactamente 30 días hábiles
-                LocalDateTime nuevaFecha = sumarDiasHabiles(LocalDateTime.now(), 30);
-                
-                Inspeccion segundaInspeccion = Inspeccion.builder()
-                        .tramite(tramite)
-                        .numeroInspeccion(2)
-                        .estado(EstadoInspeccion.PROGRAMADA)
-                        .fechaProgramada(nuevaFecha)
-                        .build();
-                inspeccionRepository.save(segundaInspeccion);
-                
+                tramite.setFechaLimiteSubsanacion(sumarDiasHabiles(LocalDateTime.now(), 30));
             } else {
-                // Segunda inspección desaprobada = Trámite Denegado
-                tramite.setEstado(EstadoTramite.DENEGADO);
+                // Segunda inspección desaprobada = Trámite Terminado
+                tramite.setEstado(EstadoTramite.TERMINADO);
             }
         }
 
@@ -91,12 +81,25 @@ public class InspeccionServiceImpl implements InspeccionService {
         return inspeccionRepository.save(inspeccion);
     }
 
-    private LocalDateTime sumarDiasHabiles(LocalDateTime fecha, int dias) {
+    public LocalDateTime sumarDiasHabiles(LocalDateTime fecha, int dias) {
         LocalDateTime result = fecha;
         int addedDays = 0;
+        
+        // Feriados fijos de prueba (28 y 29 de julio)
+        java.util.List<java.time.LocalDate> feriados = java.util.List.of(
+            java.time.LocalDate.of(fecha.getYear(), 7, 28),
+            java.time.LocalDate.of(fecha.getYear(), 7, 29),
+            java.time.LocalDate.of(fecha.getYear(), 1, 1),
+            java.time.LocalDate.of(fecha.getYear(), 5, 1),
+            java.time.LocalDate.of(fecha.getYear(), 12, 25)
+        );
+
         while (addedDays < dias) {
             result = result.plusDays(1);
-            if (!(result.getDayOfWeek() == DayOfWeek.SATURDAY || result.getDayOfWeek() == DayOfWeek.SUNDAY)) {
+            boolean isWeekend = result.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || result.getDayOfWeek() == java.time.DayOfWeek.SUNDAY;
+            boolean isFeriado = feriados.contains(result.toLocalDate());
+            
+            if (!isWeekend && !isFeriado) {
                 addedDays++;
             }
         }
@@ -106,6 +109,11 @@ public class InspeccionServiceImpl implements InspeccionService {
     @Override
     public java.util.List<Inspeccion> obtenerInspeccionesPendientes() {
         return inspeccionRepository.findByEstado(EstadoInspeccion.PROGRAMADA);
+    }
+
+    @Override
+    public java.util.List<Inspeccion> obtenerInspeccionesDelDia(User inspector) {
+        return inspeccionRepository.findByInspectorIdAndEstadoAndFechaProgramada(inspector.getId(), EstadoInspeccion.PROGRAMADA, LocalDateTime.now());
     }
 
     @Override

@@ -75,18 +75,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Web Scraping -->
-        <dependency>
-            <groupId>org.jsoup</groupId>
-            <artifactId>jsoup</artifactId>
-            <version>1.17.2</version>
-        </dependency>
-        <!-- Playwright for scraping protected sites -->
-        <dependency>
-            <groupId>com.microsoft.playwright</groupId>
-            <artifactId>playwright</artifactId>
-            <version>1.40.0</version>
-        </dependency>
+        <!-- Web Scraping (Dependencias removidas) -->
 
         <!-- PDF & QR -->
         <dependency>
@@ -138,6 +127,11 @@
         </dependency>
         
         <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

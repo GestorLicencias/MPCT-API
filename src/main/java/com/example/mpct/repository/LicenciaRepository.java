@@ -11,10 +11,11 @@ import java.util.UUID;
 public interface LicenciaRepository extends JpaRepository<Licencia, UUID> {
     Optional<Licencia> findByTramiteId(UUID tramiteId);
     Optional<Licencia> findByNumeroLicencia(String numeroLicencia);
+    java.util.List<Licencia> findByEstado(com.example.mpct.model.enums.EstadoLicencia estado);
 
-    @org.springframework.data.jpa.repository.Query("SELECT l FROM Licencia l WHERE l.tramite.ruc = :ruc AND l.estado = 'ACTIVA'")
+    @org.springframework.data.jpa.repository.Query(value = "SELECT * FROM licencias WHERE tramite_id IN (SELECT id FROM tramites WHERE ruc = :ruc) AND estado IN ('VIGENTE', 'VENCIDA') ORDER BY fecha_emision DESC LIMIT 1", nativeQuery = true)
     Optional<Licencia> findByTramiteRuc(@org.springframework.data.repository.query.Param("ruc") String ruc);
 
-    @org.springframework.data.jpa.repository.Query("SELECT l.pdfArchivo FROM Licencia l WHERE l.tramite.ruc = :ruc AND l.estado = 'ACTIVA'")
+    @org.springframework.data.jpa.repository.Query(value = "SELECT pdf_archivo FROM licencias WHERE tramite_id IN (SELECT id FROM tramites WHERE ruc = :ruc) ORDER BY fecha_emision DESC LIMIT 1", nativeQuery = true)
     Optional<byte[]> findPdfArchivoByTramiteRuc(@org.springframework.data.repository.query.Param("ruc") String ruc);
 }

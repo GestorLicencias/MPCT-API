@@ -2,9 +2,6 @@ package com.example.mpct.service.impl;
 
 import com.example.mpct.service.SunatScrapingService;
 import com.example.mpct.dto.sunat.SunatRucResponse;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -12,13 +9,22 @@ import java.io.IOException;
 @Service
 public class SunatScrapingServiceImpl implements SunatScrapingService {
 
+    private final org.springframework.web.client.RestTemplate restTemplate;
+
+    public SunatScrapingServiceImpl(org.springframework.web.client.RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
     public SunatRucResponse validarRuc(String ruc) {
         if (ruc == null || ruc.length() != 11) {
             throw new RuntimeException("El RUC debe tener 11 dígitos");
         }
+        
+        if (!ruc.startsWith("20")) {
+            throw new RuntimeException("Este trámite solo acepta RUC de persona jurídica");
+        }
 
         try {
-            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
             String url = "https://api.apis.net.pe/v1/ruc?numero=" + ruc;
             
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
@@ -34,10 +40,27 @@ public class SunatScrapingServiceImpl implements SunatScrapingService {
                 throw new RuntimeException("No se encontraron datos para el RUC especificado.");
             }
 
-            String razonSocial = (String) response.get("nombre");
             String estado = (String) response.get("estado");
-            String condicion = (String) response.get("condicion");
+            if (estado != null && !estado.trim().equalsIgnoreCase("ACTIVO")) {
+                throw new RuntimeException("El RUC no se encuentra ACTIVO (Estado actual: " + estado + ").");
+            }
+
+            String provincia = (String) response.get("provincia");
+            String departamento = (String) response.get("departamento");
             String domicilioFiscal = (String) response.get("direccion");
+            
+            boolean esTrujillo = false;
+            if (provincia != null && provincia.toUpperCase().contains("TRUJILLO")) esTrujillo = true;
+            if (departamento != null && departamento.toUpperCase().contains("TRUJILLO")) esTrujillo = true;
+            if (domicilioFiscal != null && domicilioFiscal.toUpperCase().contains("TRUJILLO")) esTrujillo = true;
+
+            if (!esTrujillo) {
+                throw new RuntimeException("El trámite no procede: El domicilio fiscal no corresponde a la jurisdicción de Trujillo.");
+            }
+
+            String razonSocial = (String) response.get("nombre");
+            String condicion = (String) response.get("condicion");
+            
             if (domicilioFiscal == null || domicilioFiscal.isEmpty()) {
                 domicilioFiscal = "No registrado";
             }

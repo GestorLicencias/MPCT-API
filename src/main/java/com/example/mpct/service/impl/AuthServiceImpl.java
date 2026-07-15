@@ -22,6 +22,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public AuthResponse login(AuthRequest request) {
         authenticationManager.authenticate(
@@ -35,5 +36,24 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtService.generateToken(userDetails);
 
         return new AuthResponse(token, user.getEmail(), user.getRole().name());
+    }
+
+
+
+    @Override
+    public void changePassword(String email, com.example.mpct.dto.auth.ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("La contraseña actual es incorrecta");
+        }
+        
+        if (request.newPassword().length() < 8) {
+            throw new RuntimeException("La nueva contraseña debe tener al menos 8 caracteres");
+        }
+        
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 }
