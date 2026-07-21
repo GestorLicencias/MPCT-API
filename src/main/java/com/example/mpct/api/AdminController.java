@@ -29,6 +29,8 @@ public class AdminController {
     private final com.example.mpct.service.CajaService cajaService;
     private final com.example.mpct.service.NotificacionService notificacionService;
     private final com.example.mpct.service.TaskLockService taskLockService;
+    private final com.example.mpct.service.InspeccionSchedulingService inspeccionSchedulingService;
+    private final com.example.mpct.service.LicenciaService licenciaService;
 
     @GetMapping("/configuraciones")
     @PreAuthorize("hasRole('ADMIN')")
@@ -121,54 +123,61 @@ public class AdminController {
     @PostMapping("/pagos/{id}/validar")
     @PreAuthorize("hasRole('ADMIN')")
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<?> validarPago(
-            @PathVariable java.util.UUID id, 
+    public ResponseEntity<MessageResponse> validarPagoTransferencia(
+            @PathVariable java.util.UUID id,
             @RequestBody ValidarPagoAdminRequest request,
-            java.security.Principal principal
-    ) {
-        taskLockService.unlockTask(id.toString(), principal.getName());
-        boolean aprobado = request.aprobado();
-        String motivoOverride = request.motivoOverride();
+            java.security.Principal principal) {
+        
+        try {
+            boolean aprobado = request.aprobado();
+            String motivoOverride = request.motivoOverride();
 
-        if (aprobado && (motivoOverride == null || motivoOverride.trim().isEmpty())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Debe especificar un motivoOverride para validar pagos administrativamente."));
-        }
+            if (aprobado && (motivoOverride == null || motivoOverride.trim().isEmpty())) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Debe especificar un motivoOverride para validar pagos administrativamente."));
+            }
 
-        com.example.mpct.model.entity.Pago pago = pagoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
-        com.example.mpct.model.entity.Tramite tramite = pago.getTramite();
+            com.example.mpct.model.entity.Pago pago = pagoRepository.findById(id).orElseThrow(() -> new RuntimeException("Pago no encontrado"));
+            if (!"PENDIENTE".equals(pago.getEstadoPago())) {
+                throw new RuntimeException("El pago no está en estado PENDIENTE");
+            }
 
-        if (aprobado) {
-            pago.setEstadoPago("COMPLETADO");
-            pago.setMotivoOverride(motivoOverride);
-            pago.setValidadoPorAdmin(principal.getName());
+            com.example.mpct.model.entity.Tramite tramite = pago.getTramite();
 
-            pago = pagoRepository.save(pago);
-            if (tramite.getRequiereInspeccion()) {
-                tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION, null);
+            if (aprobado) {
+                pago.setEstadoPago("COMPLETADO");
+                pago.setMotivoOverride(motivoOverride);
+                pago.setValidadoPorAdmin(principal.getName());
+
+                pago = pagoRepository.save(pago);
+                if (tramite.getRequiereInspeccion()) {
+                    tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PROGRAMADO, null);
+                    inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+                } else {
+                    tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.APROBADO, null);
+                    licenciaService.generarLicencia(tramite);
+                }
+                
+                // Generar Comprobante interno
+                comprobanteService.generarYGuardar(pago);
+                
+                return ResponseEntity.ok(new MessageResponse("Pago aprobado por override. " + (tramite.getRequiereInspeccion() ? "Trámite programado para inspección." : "Licencia generada automáticamente.")));
             } else {
-                tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PAGADO, null);
-                inspeccionService.programarInspeccionInicial(tramite);
+                pago.setEstadoPago("RECHAZADO");
+                pago.setMotivoOverride(motivoOverride);
+                pago.setValidadoPorAdmin(principal.getName());
+                pagoRepository.save(pago);
+                tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO, null);
+    
+                // Enviar email de rechazo al usuario
+                if (motivoOverride != null && !motivoOverride.trim().isEmpty()) {
+                    String mensaje = "Su pago para el trámite de licencia (RUC: " + tramite.getRuc() + ") ha sido rechazado.\n\nMotivo: " + motivoOverride + "\n\nPor favor ingrese al sistema para volver a intentar el pago.";
+                    notificacionService.enviarEmail(tramite.getEmail(), "Pago de Trámite Rechazado", mensaje, tramite.getId());
+                }
+    
+                return ResponseEntity.ok(new MessageResponse("Pago rechazado. Trámite devuelto a pendiente de pago."));
             }
-            
-            // Generar Comprobante interno
-            comprobanteService.generarYGuardar(pago);
-            
-            return ResponseEntity.ok(new MessageResponse("Pago aprobado por override. " + (tramite.getRequiereInspeccion() ? "Trámite pendiente de revisión." : "Trámite pagado.")));
-        } else {
-            pago.setEstadoPago("RECHAZADO");
-            pago.setMotivoOverride(motivoOverride);
-            pago.setValidadoPorAdmin(principal.getName());
-            pagoRepository.save(pago);
-            tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO, null);
-
-            // Enviar email de rechazo al usuario
-            if (motivoOverride != null && !motivoOverride.trim().isEmpty()) {
-                String mensaje = "Su pago para el trámite de licencia (RUC: " + tramite.getRuc() + ") ha sido rechazado.\n\nMotivo: " + motivoOverride + "\n\nPor favor ingrese al sistema para volver a intentar el pago.";
-                notificacionService.enviarEmail(tramite.getEmail(), "Pago de Trámite Rechazado", mensaje, tramite.getId());
-            }
-
-            return ResponseEntity.ok(new MessageResponse("Pago rechazado. Trámite devuelto a pendiente de pago."));
+        } finally {
+            taskLockService.unlockTask(id.toString(), principal.getName());
         }
     }
 

@@ -96,7 +96,48 @@ public class RucValidationService {
             }
 
             List<Map<String, String>> representantes = (List<Map<String, String>>) response2.get("data");
-            Map<String, String> gerente = representantes != null && !representantes.isEmpty() ? representantes.get(0) : null;
+            Map<String, String> gerente = null;
+
+            if (representantes != null && !representantes.isEmpty()) {
+                List<String> cargosPrioridad = List.of(
+                        "GERENTE GENERAL", "GERENTE", "APODERADO", "TITULAR-GERENTE",
+                        "PRESIDENTE DE DIRECTORIO", "DIRECTOR GERENTE"
+                );
+
+                int mejorPrioridadIndex = Integer.MAX_VALUE;
+                java.time.LocalDate mejorFecha = null;
+
+                for (Map<String, String> rep : representantes) {
+                    String cargoStr = rep.get("cargo");
+                    if (cargoStr == null) continue;
+                    String cargoNormalizado = cargoStr.trim().toUpperCase();
+
+                    for (int i = 0; i < cargosPrioridad.size(); i++) {
+                        if (cargoNormalizado.contains(cargosPrioridad.get(i))) {
+                            String fechaStr = rep.get("fecha_desde");
+                            java.time.LocalDate fechaDesde = null;
+                            if (fechaStr != null && !fechaStr.trim().isEmpty()) {
+                                try {
+                                    fechaDesde = java.time.LocalDate.parse(fechaStr.trim(), java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                                } catch (Exception ignored) {
+                                }
+                            }
+
+                            if (i < mejorPrioridadIndex) {
+                                mejorPrioridadIndex = i;
+                                gerente = rep;
+                                mejorFecha = fechaDesde;
+                            } else if (i == mejorPrioridadIndex) {
+                                if (fechaDesde != null && (mejorFecha == null || fechaDesde.isBefore(mejorFecha))) {
+                                    gerente = rep;
+                                    mejorFecha = fechaDesde;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
 
             if (gerente == null) {
                 return ValidacionRucResponse.builder()

@@ -197,10 +197,11 @@ public class TramiteServiceImpl implements TramiteService {
             pago.setEstadoPago("COMPLETADO");
             pagoRepository.save(pago);
             if (tramite.getRequiereInspeccion()) {
-                this.actualizarEstadoTramite(tramite, EstadoTramite.PENDIENTE_REVISION, null);
-            } else {
                 this.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
                 inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+            } else {
+                this.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
+                licenciaService.generarLicencia(tramite);
             }
         } else if ("BANCO_NACION".equals(metodoPago) && voucher != null) {
             if (numeroComprobante == null || numeroComprobante.trim().isEmpty()) {

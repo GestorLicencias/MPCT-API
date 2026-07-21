@@ -31,14 +31,16 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
     private final InspeccionSchedulingService inspeccionSchedulingService;
     private final com.example.mpct.service.ComprobanteService comprobanteService;
     private final com.example.mpct.service.TramiteService tramiteService;
+    private final com.example.mpct.service.LicenciaService licenciaService;
 
-    public MercadoPagoServiceImpl(TramiteRepository tramiteRepository, PagoRepository pagoRepository, InspeccionService inspeccionService, InspeccionSchedulingService inspeccionSchedulingService, com.example.mpct.service.ComprobanteService comprobanteService, com.example.mpct.service.TramiteService tramiteService) {
+    public MercadoPagoServiceImpl(TramiteRepository tramiteRepository, PagoRepository pagoRepository, InspeccionService inspeccionService, InspeccionSchedulingService inspeccionSchedulingService, com.example.mpct.service.ComprobanteService comprobanteService, com.example.mpct.service.TramiteService tramiteService, com.example.mpct.service.LicenciaService licenciaService) {
         this.tramiteRepository = tramiteRepository;
         this.pagoRepository = pagoRepository;
         this.inspeccionService = inspeccionService;
         this.inspeccionSchedulingService = inspeccionSchedulingService;
         this.comprobanteService = comprobanteService;
         this.tramiteService = tramiteService;
+        this.licenciaService = licenciaService;
     }
 
     @Value("${mercadopago.access.token}")
@@ -141,10 +143,11 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
                 // Generar comprobante interno
                 comprobanteService.generarYGuardar(pago);
                 if (tramite.getRequiereInspeccion()) {
-                    tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION, null);
-                } else {
                     tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PROGRAMADO, null);
                     inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+                } else {
+                    tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.APROBADO, null);
+                    licenciaService.generarLicencia(tramite);
                 }
                 
                 System.out.println("Trámite RUC " + tramite.getRuc() + " pagado y actualizado exitosamente.");

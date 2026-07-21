@@ -13,6 +13,7 @@ import com.example.mpct.service.CajaService;
 import com.example.mpct.service.InspeccionService;
 import com.example.mpct.service.InspeccionSchedulingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class CajaServiceImpl implements CajaService {
     private final com.example.mpct.service.NotificacionService notificacionService;
     private final com.example.mpct.service.ComprobanteService comprobanteService;
     private final com.example.mpct.service.TramiteService tramiteService;
+    private final com.example.mpct.service.LicenciaService licenciaService;
     private final com.example.mpct.repository.PagoDetalleRepository pagoDetalleRepository;
 
     @Override
@@ -53,7 +55,12 @@ public class CajaServiceImpl implements CajaService {
                 .estado(EstadoCaja.ABIERTA)
                 .build();
         
-        cajaRepository.save(caja);
+        try {
+            cajaRepository.save(caja);
+        } catch (DataIntegrityViolationException e) {
+            // El índice parcial ux_caja_usuario_abierta detecta apertura concurrente.
+            throw new RuntimeException("El usuario ya tiene una caja abierta (apertura concurrente detectada)");
+        }
     }
 
     @Override
@@ -211,10 +218,11 @@ public class CajaServiceImpl implements CajaService {
 
         // Actualizar Tramite
         if (tramite.getRequiereInspeccion()) {
-            tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PENDIENTE_REVISION, null);
-        } else {
             tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
             inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+        } else {
+            tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
+            licenciaService.generarLicencia(tramite);
         }
 
         return new com.example.mpct.dto.caja.PagoPresencialResponse(mapToResponse(tramite), vueltoTotal, "Pago registrado exitosamente");
@@ -362,10 +370,11 @@ public class CajaServiceImpl implements CajaService {
             pago = pagoRepository.save(pago);
 
             if (tramite.getRequiereInspeccion()) {
-                tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PENDIENTE_REVISION, null);
-            } else {
-                tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PAGADO, null);
+                tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
                 inspeccionService.programarInspeccionInicial(tramite);
+            } else {
+                tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
+                licenciaService.generarLicencia(tramite);
             }
             
             // Generar Comprobante

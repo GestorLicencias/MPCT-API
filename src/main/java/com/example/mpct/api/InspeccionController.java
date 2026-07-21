@@ -50,12 +50,34 @@ public class InspeccionController {
             @RequestParam(value = "observaciones", required = false) String observaciones,
             @RequestParam(value = "archivosObservados", required = false) String archivosObservados
     ) {
-        taskLockService.unlockTask(id.toString(), getCurrentUser().getEmail());
-        if (!conforme && (observaciones == null || observaciones.trim().isEmpty())) {
-            throw new RuntimeException("Las observaciones son obligatorias si la inspección no es conforme.");
+        try {
+            if (!conforme && (observaciones == null || observaciones.trim().isEmpty())) {
+                throw new RuntimeException("Las observaciones son obligatorias si la inspección no es conforme.");
+            }
+            var insp = inspeccionService.evaluarInspeccion(getCurrentUser(), id, conforme, observaciones, archivosObservados);
+            return ResponseEntity.ok(mapInspeccionToDto(insp));
+        } finally {
+            taskLockService.unlockTask(id.toString(), getCurrentUser().getEmail());
         }
-        var insp = inspeccionService.evaluarInspeccion(getCurrentUser(), id, conforme, observaciones, archivosObservados);
-        return ResponseEntity.ok(mapInspeccionToDto(insp));
+    }
+
+    @PostMapping("/{id}/lock")
+    @PreAuthorize("hasRole('INSPECTOR')")
+    public ResponseEntity<?> lockInspeccion(@PathVariable UUID id) {
+        boolean success = taskLockService.lockTask(id.toString(), getCurrentUser().getEmail());
+        if (success) {
+            return ResponseEntity.ok(java.util.Map.of("message", "Inspección bloqueada exitosamente."));
+        } else {
+            String owner = taskLockService.getLockOwner(id.toString()).orElse("desconocido");
+            return ResponseEntity.status(409).body(java.util.Map.of("message", "La inspección está siendo evaluada por: " + owner));
+        }
+    }
+
+    @PostMapping("/{id}/unlock")
+    @PreAuthorize("hasRole('INSPECTOR')")
+    public ResponseEntity<?> unlockInspeccion(@PathVariable UUID id) {
+        taskLockService.unlockTask(id.toString(), getCurrentUser().getEmail());
+        return ResponseEntity.ok(java.util.Map.of("message", "Inspección desbloqueada exitosamente."));
     }
 
     private java.util.Map<String, Object> mapInspeccionToDto(Inspeccion insp) {
@@ -79,7 +101,7 @@ public class InspeccionController {
         tramiteDto.put("dni", insp.getTramite().getDni());
         
         java.util.Map<String, Object> solicitanteDto = new java.util.HashMap<>();
-        solicitanteDto.put("email", insp.getTramite().getRuc() + "@tramite.com"); // Dummy email para que el frontend no de error
+        solicitanteDto.put("email", insp.getTramite().getEmail());
         tramiteDto.put("solicitante", solicitanteDto);
         
         tramiteDto.put("area", insp.getTramite().getArea());

@@ -1,60 +1,61 @@
 package com.example.mpct.service;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.Map;
+import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TaskLockService {
 
-    // Simula Redis usando memoria (para evitar que explote si no hay Redis instalado).
-    // Mapa: ID de Tarea -> Info del candado
-    private final Map<String, LockInfo> locks = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redisTemplate;
+    private static final String LOCK_PREFIX = "task:lock:";
+    private static final Duration LOCK_EXPIRATION = Duration.ofMinutes(30);
 
-    public record LockInfo(String lockedBy, LocalDateTime lockedAt) {}
+    public TaskLockService(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     /**
-     * Intenta bloquear una tarea.
+     * Intenta bloquear una tarea en Redis.
      * @return true si se bloqueó exitosamente o si ya estaba bloqueada por el mismo usuario.
      */
     public boolean lockTask(String taskId, String username) {
-        cleanExpiredLocks();
+        String key = LOCK_PREFIX + taskId;
         
-        LockInfo currentLock = locks.get(taskId);
-        if (currentLock == null) {
-            locks.put(taskId, new LockInfo(username, LocalDateTime.now()));
+        // Use setIfAbsent to prevent race conditions
+        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(key, username, LOCK_EXPIRATION);
+        
+        if (Boolean.TRUE.equals(acquired)) {
             return true;
-        } else if (currentLock.lockedBy().equals(username)) {
-            // Refrescar el candado
-            locks.put(taskId, new LockInfo(username, LocalDateTime.now()));
-            return true;
+        } else {
+            // Check if already locked by the same user
+            String owner = redisTemplate.opsForValue().get(key);
+            if (username.equals(owner)) {
+                // Refresh the expiration time
+                redisTemplate.expire(key, LOCK_EXPIRATION);
+                return true;
+            }
         }
         return false;
     }
 
     public void unlockTask(String taskId, String username) {
-        LockInfo currentLock = locks.get(taskId);
-        if (currentLock != null && currentLock.lockedBy().equals(username)) {
-            locks.remove(taskId);
+        String key = LOCK_PREFIX + taskId;
+        String owner = redisTemplate.opsForValue().get(key);
+        if (username.equals(owner)) {
+            redisTemplate.delete(key);
         }
     }
     
     public void forceUnlock(String taskId) {
-        locks.remove(taskId);
+        String key = LOCK_PREFIX + taskId;
+        redisTemplate.delete(key);
     }
 
     public Optional<String> getLockOwner(String taskId) {
-        cleanExpiredLocks();
-        LockInfo info = locks.get(taskId);
-        return info != null ? Optional.of(info.lockedBy()) : Optional.empty();
-    }
-
-    private void cleanExpiredLocks() {
-        // Expirar candados después de 15 minutos
-        LocalDateTime threshold = LocalDateTime.now().minusMinutes(15);
-        locks.entrySet().removeIf(entry -> entry.getValue().lockedAt().isBefore(threshold));
+        String key = LOCK_PREFIX + taskId;
+        return Optional.ofNullable(redisTemplate.opsForValue().get(key));
     }
 }

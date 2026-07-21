@@ -37,6 +37,8 @@ public class CajaServiceIntegrationTest {
     private MovimientoCajaRepository movimientoCajaRepository;
     @Autowired
     private ComprobanteRepository comprobanteRepository;
+    @Autowired
+    private LicenciaRepository licenciaRepository;
 
     private User cajero;
     private Tramite tramite;
@@ -63,6 +65,7 @@ public class CajaServiceIntegrationTest {
         caja.setMontoInicial(new BigDecimal("100.00"));
         cajaRepository.save(caja);
 
+        licenciaRepository.deleteAll();
         tramiteRepository.deleteAll();
         tramite = new Tramite();
         tramite.setRuc("20123456789");
