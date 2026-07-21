@@ -140,11 +140,12 @@ public class TramiteController {
             @RequestParam("rubro") String rubro,
             @RequestParam("dni") String dni,
             @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "direccion", required = false) String direccion,
             @RequestParam("area") java.math.BigDecimal area,
             @RequestParam("tipo") TipoTramite tipo,
-            @RequestParam("plano") MultipartFile plano
+            @RequestParam(value = "plano", required = false) MultipartFile plano
     ) {
-        return ResponseEntity.ok(tramiteService.crearTramite(ruc, representanteLegal, rubro, dni, email, area, tipo, plano));
+        return ResponseEntity.ok(tramiteService.crearTramite(ruc, representanteLegal, rubro, dni, email, direccion, area, tipo, plano));
     }
 
     @PostMapping("/{ruc}/pagar")

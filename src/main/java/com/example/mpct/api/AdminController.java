@@ -89,7 +89,7 @@ public class AdminController {
         List<com.example.mpct.model.entity.Pago> pendientes = pagoRepository.findByEstadoPago("PENDIENTE");
         // Filtrar por estado del trámite para excluir trámites muertos/terminales
         pendientes = pendientes.stream()
-                .filter(p -> p.getTramite().getEstado() == com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO)
+                .filter(p -> p.getTramite().getEstado() == com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO || p.getTramite().getEstado() == com.example.mpct.model.enums.EstadoTramite.VALIDANDO_PAGO)
                 .sorted((a, b) -> b.getFechaPago().compareTo(a.getFechaPago()))
                 .toList();
         

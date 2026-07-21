@@ -5,7 +5,7 @@ import com.example.mpct.model.enums.TipoTramite;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface TramiteService {
-    TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, String email, java.math.BigDecimal area, TipoTramite tipo, org.springframework.web.multipart.MultipartFile plano);
+    TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, String email, String direccion, java.math.BigDecimal area, TipoTramite tipo, org.springframework.web.multipart.MultipartFile plano);
     TramiteResponse obtenerTramitePorRuc(String ruc);
     TramiteResponse actualizarArchivos(String ruc, MultipartFile plano);
     TramiteResponse pagarTramite(String ruc, String metodoPago, MultipartFile voucher, String transactionId, String numeroComprobante);

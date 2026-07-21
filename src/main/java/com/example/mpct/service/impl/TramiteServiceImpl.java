@@ -33,7 +33,7 @@ public class TramiteServiceImpl implements TramiteService {
     private final NotificacionService notificacionService;
 
     @Transactional
-    public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, String email, BigDecimal area, TipoTramite tipo, MultipartFile plano) {
+    public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, String email, String direccion, BigDecimal area, TipoTramite tipo, MultipartFile plano) {
         
         // --- Validación por tipo de trámite (NUEVO vs RENOVACION) ---
         java.util.Optional<Licencia> licenciaPreviaOpt = licenciaRepository.findByTramiteRuc(ruc);
@@ -93,7 +93,7 @@ public class TramiteServiceImpl implements TramiteService {
 
         byte[] planoBytes = null;
 
-        String finalDomicilio = validacion.getDomicilioFiscal() != null ? validacion.getDomicilioFiscal() : "No registrado";
+        String finalDomicilio = (direccion != null && !direccion.trim().isEmpty()) ? direccion : (validacion.getDomicilioFiscal() != null ? validacion.getDomicilioFiscal() : "No registrado");
         BigDecimal finalArea = area;
 
         try {
@@ -101,7 +101,9 @@ public class TramiteServiceImpl implements TramiteService {
                 Tramite anterior = licenciaPreviaOpt.get().getTramite();
                 planoBytes = anterior.getArchivoPlano();
                 finalArea = anterior.getArea();
-                finalDomicilio = anterior.getDomicilioFiscal();
+                if (direccion == null || direccion.trim().isEmpty()) {
+                    finalDomicilio = anterior.getDomicilioFiscal();
+                }
             } else {
                 if (plano != null) planoBytes = plano.getBytes();
             }
@@ -212,11 +214,7 @@ public class TramiteServiceImpl implements TramiteService {
                 throw new RuntimeException("Error guardando el voucher");
             }
             pagoRepository.save(pago);
-            if (tramite.getRequiereInspeccion()) {
-                this.actualizarEstadoTramite(tramite, EstadoTramite.PENDIENTE_REVISION, null);
-            } else {
-                this.actualizarEstadoTramite(tramite, EstadoTramite.VALIDANDO_PAGO, null);
-            }
+            this.actualizarEstadoTramite(tramite, EstadoTramite.VALIDANDO_PAGO, null);
         } else {
             throw new RuntimeException("Método de pago inválido o falta voucher");
         }
