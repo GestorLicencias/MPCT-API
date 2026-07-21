@@ -23,8 +23,12 @@ public class InspeccionController {
     @GetMapping("/pendientes")
     @PreAuthorize("hasRole('INSPECTOR')")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<java.util.List<java.util.Map<String, Object>>> getInspeccionesPendientes() {
-        var inspecciones = inspeccionService.obtenerInspeccionesDelDia(getCurrentUser());
+    public ResponseEntity<java.util.List<java.util.Map<String, Object>>> getInspeccionesPendientes(
+            @RequestParam(value = "soloHoy", defaultValue = "true") boolean soloHoy
+    ) {
+        var inspecciones = soloHoy ? 
+                inspeccionService.obtenerInspeccionesDelDia(getCurrentUser()) : 
+                inspeccionService.obtenerTodasInspeccionesPendientes(getCurrentUser());
         var dtos = inspecciones.stream().map(this::mapInspeccionToDto).toList();
         return ResponseEntity.ok(dtos);
     }

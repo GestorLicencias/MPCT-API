@@ -116,6 +116,11 @@ public class InspeccionServiceImpl implements InspeccionService {
     }
 
     @Override
+    public java.util.List<Inspeccion> obtenerTodasInspeccionesPendientes(User inspector) {
+        return inspeccionRepository.findByInspectorIdAndEstado(inspector.getId(), EstadoInspeccion.PROGRAMADA);
+    }
+
+    @Override
     public java.util.List<Inspeccion> obtenerInspeccionesDelDia(User inspector) {
         return inspeccionRepository.findByInspectorIdAndEstadoAndFechaProgramada(inspector.getId(), EstadoInspeccion.PROGRAMADA, LocalDateTime.now());
     }
