@@ -34,17 +34,7 @@ public class AdminController {
         return ResponseEntity.ok(configuracionRepository.findAll());
     }
 
-    @GetMapping("/pagos/pendientes")
-    @PreAuthorize("hasRole('ADMIN')")
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<List<com.example.mpct.dto.pago.PagoResponse>> getPagosPendientes() {
-        List<com.example.mpct.model.entity.Pago> pagos = pagoRepository.findByEstadoPago("PENDIENTE");
-        List<com.example.mpct.dto.pago.PagoResponse> response = pagos.stream().map(p -> new com.example.mpct.dto.pago.PagoResponse(
-                p.getId(), p.getTramite().getRuc(), p.getTramite().getRazonSocial(), p.getMonto(),
-                p.getMetodoPago(), p.getEstadoPago(), p.getFechaPago()
-        )).toList();
-        return ResponseEntity.ok(response);
-    }
+
 
     @GetMapping("/caja/cierres")
     @PreAuthorize("hasRole('ADMIN')")

@@ -89,10 +89,6 @@ public class TramiteServiceImpl implements TramiteService {
         SunatRucResponse sunatData = sunatScrapingService.validarRuc(ruc);
 
         byte[] planoBytes = null;
-        byte[] fotoBytes = null;
-        byte[] foto2Bytes = null;
-        byte[] foto3Bytes = null;
-        byte[] foto4Bytes = null;
 
         String finalDomicilio = sunatData.domicilioFiscal();
         BigDecimal finalArea = area;
@@ -101,26 +97,10 @@ public class TramiteServiceImpl implements TramiteService {
             if (tipo == TipoTramite.RENOVACION) {
                 Tramite anterior = licenciaPreviaOpt.get().getTramite();
                 planoBytes = anterior.getArchivoPlano();
-                // En renovación se exige foto nueva de fachada (fotos[0])
-                if (fotos != null && !fotos.isEmpty()) {
-                    fotoBytes = fotos.get(0).getBytes();
-                } else {
-                    throw new RuntimeException("Para renovación debe adjuntar una foto de la fachada actualizada.");
-                }
-                // Las demás se pueden heredar si no se envían
-                foto2Bytes = anterior.getArchivoFoto2();
-                foto3Bytes = anterior.getArchivoFoto3();
-                foto4Bytes = anterior.getArchivoFoto4();
                 finalArea = anterior.getArea();
                 finalDomicilio = anterior.getDomicilioFiscal();
             } else {
                 if (plano != null) planoBytes = plano.getBytes();
-                if (fotos != null && !fotos.isEmpty()) {
-                    fotoBytes = fotos.get(0).getBytes();
-                    if (fotos.size() > 1) foto2Bytes = fotos.get(1).getBytes();
-                    if (fotos.size() > 2) foto3Bytes = fotos.get(2).getBytes();
-                    if (fotos.size() > 3) foto4Bytes = fotos.get(3).getBytes();
-                }
             }
         } catch (java.io.IOException e) {
             throw new RuntimeException("Error al leer los archivos: " + e.getMessage());
@@ -150,10 +130,6 @@ public class TramiteServiceImpl implements TramiteService {
                 .estado(EstadoTramite.PENDIENTE_PAGO)
                 .montoCobrado(precio)
                 .archivoPlano(planoBytes)
-                .archivoFoto(fotoBytes)
-                .archivoFoto2(foto2Bytes)
-                .archivoFoto3(foto3Bytes)
-                .archivoFoto4(foto4Bytes)
                 .requiereInspeccion(requiereInspeccion)
                 .build();
 
@@ -178,8 +154,7 @@ public class TramiteServiceImpl implements TramiteService {
             throw new RuntimeException("Solo se pueden actualizar archivos de trámites observados");
         }
 
-        try {
-            if (plano != null && !plano.isEmpty()) {
+        if (plano != null && !plano.isEmpty()) {
             try {
                 tramite.setArchivoPlano(plano.getBytes());
             } catch (java.io.IOException e) {

@@ -230,6 +230,16 @@ public class CajaServiceImpl implements CajaService {
                 .map(p -> "RECHAZADO".equals(p.getEstadoPago()))
                 .orElse(false);
 
+        com.example.mpct.model.enums.EstadoLicencia estadoLic = null;
+        java.time.LocalDateTime fechaVencimiento = null;
+        if (t.getEstado() == EstadoTramite.APROBADO) {
+            java.util.Optional<com.example.mpct.model.entity.Licencia> licOpt = licenciaRepository.findByTramiteId(t.getId());
+            if (licOpt.isPresent()) {
+                estadoLic = licOpt.get().getEstado();
+                fechaVencimiento = licOpt.get().getFechaVencimiento();
+            }
+        }
+
         return new TramiteResponse(
                 t.getId(), t.getRuc(), t.getRazonSocial(), t.getDomicilioFiscal(), t.getRepresentanteLegal(), t.getRubro(),
                 t.getDni(), t.getEmail(), t.getArea(),
@@ -239,7 +249,9 @@ public class CajaServiceImpl implements CajaService {
                 t.getObservacionesGenerales(),
                 t.getArchivosObservados(),
                 t.getCreatedAt(), t.getUpdatedAt(),
-                pagoRechazado
+                pagoRechazado,
+                estadoLic,
+                fechaVencimiento
         );
     }
 
