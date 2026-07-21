@@ -242,6 +242,50 @@ public class AdminController {
         }
     }
     
+    @GetMapping("/usuarios")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllUsers() {
+        List<com.example.mpct.model.entity.User> users = userRepository.findAll();
+        List<java.util.Map<String, Object>> response = users.stream().map(u -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", u.getId());
+            map.put("email", u.getEmail());
+            map.put("role", u.getRole().name());
+            map.put("isActive", u.getIsActive());
+            map.put("createdAt", u.getCreatedAt());
+            return map;
+        }).toList();
+        return ResponseEntity.ok(response);
+    }
+    
+    @PatchMapping("/usuarios/{id}/estado")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> cambiarEstadoUsuario(
+            @PathVariable java.util.UUID id,
+            @RequestBody java.util.Map<String, Boolean> request,
+            java.security.Principal principal
+    ) {
+        com.example.mpct.model.entity.User adminActual = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Admin no encontrado"));
+                
+        if (id.equals(adminActual.getId())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("No puedes suspender tu propia cuenta"));
+        }
+        
+        com.example.mpct.model.entity.User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                
+        Boolean newStatus = request.get("isActive");
+        if (newStatus == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Falta el campo isActive"));
+        }
+        
+        user.setIsActive(newStatus);
+        userRepository.save(user);
+        
+        return ResponseEntity.ok(new MessageResponse(newStatus ? "Usuario reactivado exitosamente" : "Usuario suspendido exitosamente"));
+    }
+    
     public record ValidarPagoAdminRequest(boolean aprobado, String motivoOverride) {}
     public record MessageResponse(String message) {}
 }
