@@ -173,6 +173,9 @@ public class TramiteServiceImpl implements TramiteService {
 
         this.actualizarEstadoTramite(tramite, EstadoTramite.EN_SUBSANACION, null);
         
+        // Programar la segunda inspección para dentro de 3 días hábiles
+        inspeccionSchedulingService.programarInspeccion(tramite, 2, 3);
+        
         return mapToResponse(tramite);
     }
 

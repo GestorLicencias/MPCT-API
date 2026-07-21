@@ -86,8 +86,6 @@ public class InspeccionSchedulingServiceImpl implements InspeccionSchedulingServ
                 .build();
         inspeccionRepository.save(inspeccion);
 
-        tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
-
         return inspeccion;
     }
 
@@ -101,7 +99,6 @@ public class InspeccionSchedulingServiceImpl implements InspeccionSchedulingServ
                 .build();
         inspeccionRepository.save(inspeccion);
 
-        tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
         return inspeccion;
     }
 
