@@ -79,7 +79,7 @@ public class AdminController {
     }
 
     @GetMapping("/pagos/{id}/voucher")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO')")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<byte[]> getVoucher(@PathVariable java.util.UUID id) {
         com.example.mpct.model.entity.Pago pago = pagoRepository.findById(id)
@@ -90,6 +90,34 @@ public class AdminController {
         return ResponseEntity.ok()
                 .contentType(org.springframework.http.MediaType.IMAGE_JPEG)
                 .body(pago.getArchivoVoucher());
+    }
+
+    @GetMapping("/pagos/pendientes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<?> getPagosPendientes() {
+        List<com.example.mpct.model.entity.Pago> pendientes = pagoRepository.findByEstadoPago("PENDIENTE");
+        // Filtrar por estado del trámite para excluir trámites muertos/terminales
+        pendientes = pendientes.stream()
+                .filter(p -> p.getTramite().getEstado() == com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO)
+                .sorted((a, b) -> b.getFechaPago().compareTo(a.getFechaPago()))
+                .toList();
+        
+        List<java.util.Map<String, Object>> response = pendientes.stream().map(p -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("pagoId", p.getId());
+            map.put("ruc", p.getTramite().getRuc());
+            map.put("razonSocial", p.getTramite().getRazonSocial());
+            map.put("monto", p.getMonto());
+            map.put("metodoPago", p.getMetodoPago());
+            map.put("numeroComprobante", p.getNumeroComprobante());
+            map.put("fechaPago", p.getFechaPago());
+            map.put("tramiteId", p.getTramite().getId());
+            map.put("hasVoucher", p.getArchivoVoucher() != null);
+            return map;
+        }).toList();
+        
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/pagos/{id}/validar")
