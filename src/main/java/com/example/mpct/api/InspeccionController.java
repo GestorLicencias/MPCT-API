@@ -19,6 +19,7 @@ public class InspeccionController {
 
     private final InspeccionService inspeccionService;
     private final UserRepository userRepository;
+    private final com.example.mpct.service.TaskLockService taskLockService;
 
     @GetMapping("/pendientes")
     @PreAuthorize("hasRole('INSPECTOR')")
@@ -49,6 +50,7 @@ public class InspeccionController {
             @RequestParam(value = "observaciones", required = false) String observaciones,
             @RequestParam(value = "archivosObservados", required = false) String archivosObservados
     ) {
+        taskLockService.unlockTask(id.toString(), getCurrentUser().getEmail());
         if (!conforme && (observaciones == null || observaciones.trim().isEmpty())) {
             throw new RuntimeException("Las observaciones son obligatorias si la inspección no es conforme.");
         }
@@ -65,6 +67,7 @@ public class InspeccionController {
         dto.put("fechaRealizada", insp.getFechaRealizada());
         dto.put("observaciones", insp.getObservaciones());
         dto.put("createdAt", insp.getFechaProgramada() != null ? insp.getFechaProgramada().toString() : java.time.LocalDateTime.now().toString());
+        dto.put("lockedBy", taskLockService.getLockOwner(insp.getId().toString()).orElse(null));
 
         java.util.Map<String, Object> tramiteDto = new java.util.HashMap<>();
         tramiteDto.put("id", insp.getTramite().getId());

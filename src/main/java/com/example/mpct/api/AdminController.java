@@ -28,6 +28,7 @@ public class AdminController {
     private final com.example.mpct.service.ComprobanteService comprobanteService;
     private final com.example.mpct.service.CajaService cajaService;
     private final com.example.mpct.service.NotificacionService notificacionService;
+    private final com.example.mpct.service.TaskLockService taskLockService;
 
     @GetMapping("/configuraciones")
     @PreAuthorize("hasRole('ADMIN')")
@@ -109,7 +110,8 @@ public class AdminController {
             map.put("numeroComprobante", p.getNumeroComprobante());
             map.put("fechaPago", p.getFechaPago());
             map.put("tramiteId", p.getTramite().getId());
-            map.put("hasVoucher", p.getArchivoVoucher() != null);
+            map.put("hasVoucher", p.getArchivoVoucherUrl() != null || p.getArchivoVoucher() != null);
+            map.put("lockedBy", taskLockService.getLockOwner(p.getId().toString()).orElse(null));
             return map;
         }).toList();
         
@@ -124,6 +126,7 @@ public class AdminController {
             @RequestBody ValidarPagoAdminRequest request,
             java.security.Principal principal
     ) {
+        taskLockService.unlockTask(id.toString(), principal.getName());
         boolean aprobado = request.aprobado();
         String motivoOverride = request.motivoOverride();
 
@@ -180,7 +183,35 @@ public class AdminController {
     @GetMapping("/tramites/revision")
     @PreAuthorize("hasRole('ADMIN') or hasRole('INSPECTOR')")
     public ResponseEntity<?> getTramitesEnRevision() {
-        return ResponseEntity.ok(tramiteRepository.findByEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION));
+        var tramites = tramiteRepository.findByEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION);
+        List<java.util.Map<String, Object>> res = tramites.stream().map(t -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", t.getId());
+            map.put("ruc", t.getRuc());
+            map.put("razonSocial", t.getRazonSocial());
+            map.put("lockedBy", taskLockService.getLockOwner(t.getId().toString()).orElse(null));
+            return map;
+        }).toList();
+        return ResponseEntity.ok(res);
+    }
+    
+    @PostMapping("/tasks/{id}/lock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'INSPECTOR')")
+    public ResponseEntity<?> lockTask(@PathVariable String id, java.security.Principal principal) {
+        boolean success = taskLockService.lockTask(id, principal.getName());
+        if (success) {
+            return ResponseEntity.ok(new MessageResponse("Tarea bloqueada exitosamente"));
+        } else {
+            String owner = taskLockService.getLockOwner(id).orElse("desconocido");
+            return ResponseEntity.status(409).body(new MessageResponse("La tarea ya estǭ siendo trabajada por: " + owner));
+        }
+    }
+
+    @PostMapping("/tasks/{id}/unlock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'INSPECTOR')")
+    public ResponseEntity<?> unlockTask(@PathVariable String id, java.security.Principal principal) {
+        taskLockService.unlockTask(id, principal.getName());
+        return ResponseEntity.ok(new MessageResponse("Candado liberado"));
     }
 
     @PutMapping("/configuraciones/{clave}")
