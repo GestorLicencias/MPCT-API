@@ -32,6 +32,7 @@ public class LicenciaServiceImpl implements LicenciaService {
     private final LicenciaRepository licenciaRepository;
     private final TramiteRepository tramiteRepository;
     private final TemplateEngine templateEngine;
+    private final com.example.mpct.service.NotificacionService notificacionService;
 
     public byte[] generarCertificadoPorRuc(String ruc) {
         Licencia licencia = licenciaRepository.findByTramiteRuc(ruc)
@@ -183,7 +184,22 @@ public class LicenciaServiceImpl implements LicenciaService {
                         .build();
             }
 
-            return licenciaRepository.save(licencia);
+            licencia = licenciaRepository.save(licencia);
+
+            // Enviar correo con la licencia
+            String mensaje = "Su trámite ha concluido exitosamente y su licencia de funcionamiento ha sido generada.\n\n" +
+                             "Puede validarla en: " + qrContent + "\n\nAdjuntamos el certificado de su licencia.";
+            
+            notificacionService.enviarEmailConAdjuntos(
+                tramite.getEmail(), 
+                "Licencia de Funcionamiento Generada - " + tramite.getRazonSocial(), 
+                mensaje, 
+                tramite.getId(), 
+                licencia.getPdfArchivo(), 
+                null
+            );
+
+            return licencia;
 
         } catch (Exception e) {
             throw new RuntimeException("Error al generar Licencia PDF: " + e.getMessage(), e);

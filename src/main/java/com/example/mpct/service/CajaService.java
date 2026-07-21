@@ -13,5 +13,5 @@ public interface CajaService {
     java.util.List<java.util.Map<String, Object>> obtenerAlertasLicencias();
     void enviarRecordatorioLicencia(String ruc);
     void forzarCierreCaja(java.util.UUID cajaId, com.example.mpct.dto.caja.ForzarCierreRequest request, String adminEmail);
-    String validarPagoCajero(java.util.UUID pagoId, boolean aprobado, String cajeroEmail);
+    String validarPagoCajero(java.util.UUID pagoId, boolean aprobado, String cajeroEmail, String motivoOverride);
 }

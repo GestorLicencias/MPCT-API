@@ -63,7 +63,28 @@ public class ComprobanteService {
                 .documentoClienteSnapshot(pago.getTramite().getRuc())
                 .build();
 
-        return comprobanteRepository.save(comprobante);
+        Comprobante saved = comprobanteRepository.save(comprobante);
+
+        try {
+            byte[] pdfBytes = generarPdf(saved);
+            String docStr = (tipo == TipoComprobante.FACTURA_INTERNA) ? "Factura" : "Boleta";
+            String asunto = docStr + " Electrónica Generada - " + pago.getTramite().getRazonSocial();
+            String mensaje = "Estimado/a,\n\nAdjuntamos su " + docStr.toLowerCase() + " electrónica por el pago de su trámite de licencia de funcionamiento.\n\nAtentamente,\nMPCT";
+            
+            notificacionService.enviarEmailConAdjuntos(
+                pago.getTramite().getEmail(), 
+                asunto, 
+                mensaje, 
+                pago.getTramite().getId(), 
+                null, 
+                pdfBytes
+            );
+        } catch (Exception e) {
+            // Ignorar el error de correo para no romper la transacción de pago
+            System.err.println("Error enviando correo de comprobante: " + e.getMessage());
+        }
+
+        return saved;
     }
 
     public byte[] generarPdf(Comprobante comprobante) {
