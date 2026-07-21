@@ -12,7 +12,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final ConfiguracionRepository configuracionRepository;
     private final com.example.mpct.repository.TramiteRepository tramiteRepository;
-    private final com.example.mpct.service.InspeccionService inspeccionService;
+    private final com.example.mpct.service.InspeccionSchedulingService inspeccionSchedulingService;
 
     @Override
     @Transactional
@@ -32,7 +32,7 @@ public class DataInitializer implements CommandLineRunner {
         for (com.example.mpct.model.entity.Tramite t : tramitesPagados) {
             if (t.getInspecciones() == null || t.getInspecciones().isEmpty()) {
                 System.out.println("Auto-Fixing: Programando inspección faltante para RUC " + t.getRuc());
-                inspeccionService.programarInspeccionInicial(t);
+                inspeccionSchedulingService.programarInspeccion(t, 1, com.example.mpct.service.InspeccionSchedulingService.MINIMO_DIAS_HABILES_PRIMERA_VISITA);
             }
         }
     }

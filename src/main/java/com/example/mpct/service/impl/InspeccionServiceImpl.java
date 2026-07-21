@@ -34,20 +34,6 @@ public class InspeccionServiceImpl implements InspeccionService {
         this.inspeccionSchedulingService = inspeccionSchedulingService;
     }
 
-    @Transactional
-    public Inspeccion programarInspeccionInicial(Tramite tramite) {
-        // Se programa para 3 días hábiles después del pago por defecto
-        LocalDateTime fechaProgramada = sumarDiasHabiles(LocalDateTime.now(), 3);
-        
-        Inspeccion inspeccion = Inspeccion.builder()
-                .tramite(tramite)
-                .numeroInspeccion(1)
-                .estado(EstadoInspeccion.PROGRAMADA)
-                .fechaProgramada(fechaProgramada)
-                .build();
-        
-        return inspeccionRepository.save(inspeccion);
-    }
 
     @Override
     @Transactional

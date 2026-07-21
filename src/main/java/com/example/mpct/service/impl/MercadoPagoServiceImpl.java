@@ -144,7 +144,7 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
                 comprobanteService.generarYGuardar(pago);
                 if (tramite.getRequiereInspeccion()) {
                     tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PROGRAMADO, null);
-                    inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+                    inspeccionSchedulingService.programarInspeccion(tramite, 1, InspeccionSchedulingService.MINIMO_DIAS_HABILES_PRIMERA_VISITA);
                 } else {
                     tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.APROBADO, null);
                     licenciaService.generarLicencia(tramite);

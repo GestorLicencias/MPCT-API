@@ -198,7 +198,7 @@ public class TramiteServiceImpl implements TramiteService {
             pagoRepository.save(pago);
             if (tramite.getRequiereInspeccion()) {
                 this.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
-                inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+                inspeccionSchedulingService.programarInspeccion(tramite, 1, InspeccionSchedulingService.MINIMO_DIAS_HABILES_PRIMERA_VISITA);
             } else {
                 this.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
                 licenciaService.generarLicencia(tramite);

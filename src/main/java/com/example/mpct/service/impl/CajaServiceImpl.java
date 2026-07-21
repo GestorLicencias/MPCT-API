@@ -219,7 +219,7 @@ public class CajaServiceImpl implements CajaService {
         // Actualizar Tramite
         if (tramite.getRequiereInspeccion()) {
             tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
-            inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
+            inspeccionSchedulingService.programarInspeccion(tramite, 1, InspeccionSchedulingService.MINIMO_DIAS_HABILES_PRIMERA_VISITA);
         } else {
             tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
             licenciaService.generarLicencia(tramite);
@@ -371,7 +371,7 @@ public class CajaServiceImpl implements CajaService {
 
             if (tramite.getRequiereInspeccion()) {
                 tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
-                inspeccionService.programarInspeccionInicial(tramite);
+                inspeccionSchedulingService.programarInspeccion(tramite, 1, InspeccionSchedulingService.MINIMO_DIAS_HABILES_PRIMERA_VISITA);
             } else {
                 tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
                 licenciaService.generarLicencia(tramite);
