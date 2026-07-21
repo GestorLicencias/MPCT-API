@@ -42,4 +42,13 @@ public class User {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String motivoSuspension;
+
+    @Column
+    private String suspendidoPorAdmin;
+
+    @Column
+    private LocalDateTime fechaSuspension;
 }

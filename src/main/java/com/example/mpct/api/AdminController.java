@@ -262,7 +262,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> cambiarEstadoUsuario(
             @PathVariable java.util.UUID id,
-            @RequestBody java.util.Map<String, Boolean> request,
+            @RequestBody UsuarioEstadoRequest request,
             java.security.Principal principal
     ) {
         com.example.mpct.model.entity.User adminActual = userRepository.findByEmail(principal.getName())
@@ -275,17 +275,29 @@ public class AdminController {
         com.example.mpct.model.entity.User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
                 
-        Boolean newStatus = request.get("isActive");
-        if (newStatus == null) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Falta el campo isActive"));
+        boolean newStatus = request.isActive();
+        if (!newStatus && (request.motivoSuspension() == null || request.motivoSuspension().trim().isEmpty())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("El motivo de suspensión es obligatorio."));
         }
         
         user.setIsActive(newStatus);
+        
+        if (!newStatus) {
+            user.setMotivoSuspension(request.motivoSuspension().trim());
+            user.setSuspendidoPorAdmin(adminActual.getId().toString());
+            user.setFechaSuspension(java.time.LocalDateTime.now());
+        } else {
+            user.setMotivoSuspension(null);
+            user.setSuspendidoPorAdmin(null);
+            user.setFechaSuspension(null);
+        }
+        
         userRepository.save(user);
         
         return ResponseEntity.ok(new MessageResponse(newStatus ? "Usuario reactivado exitosamente" : "Usuario suspendido exitosamente"));
     }
     
     public record ValidarPagoAdminRequest(boolean aprobado, String motivoOverride) {}
+    public record UsuarioEstadoRequest(boolean isActive, String motivoSuspension) {}
     public record MessageResponse(String message) {}
 }
