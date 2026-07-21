@@ -69,7 +69,6 @@ public class CajaServiceIntegrationTest {
         tramite.setEstado(EstadoTramite.PENDIENTE_PAGO);
         tramite.setMontoCobrado(new BigDecimal("150.00"));
         tramite.setRequiereInspeccion(false);
-        tramite.setArchivoFoto(new byte[]{1, 2, 3});
         tramite.setArchivoPlano(new byte[]{1, 2, 3});
         tramite.setArea(new BigDecimal("50.00"));
         tramite.setDni("12345678");

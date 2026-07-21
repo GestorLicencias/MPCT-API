@@ -48,7 +48,6 @@ public class StateIntegrationTest {
                 .estado(EstadoTramite.PENDIENTE_PAGO)
                 .requiereInspeccion(false)
                 .email("test@example.com")
-                .archivoFoto(new byte[0])
                 .archivoPlano(new byte[0])
                 .montoCobrado(new java.math.BigDecimal("150.00"))
                 .build();
@@ -75,7 +74,6 @@ public class StateIntegrationTest {
                 .estado(EstadoTramite.OBSERVADO)
                 .fechaLimiteSubsanacion(LocalDateTime.now().minusDays(1)) // Vencido hace 1 día
                 .email("test@example.com")
-                .archivoFoto(new byte[0])
                 .archivoPlano(new byte[0])
                 .montoCobrado(new java.math.BigDecimal("150.00"))
                 .build();
@@ -110,7 +108,6 @@ public class StateIntegrationTest {
                 .estado(EstadoTramite.OBSERVADO)
                 .fechaLimiteSubsanacion(LocalDateTime.now().minusDays(1)) // Vencido
                 .email("test@example.com")
-                .archivoFoto(new byte[0])
                 .archivoPlano(new byte[0])
                 .montoCobrado(new java.math.BigDecimal("150.00"))
                 .build();

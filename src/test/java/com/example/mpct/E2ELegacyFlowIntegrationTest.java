@@ -70,7 +70,6 @@ public class E2ELegacyFlowIntegrationTest {
                 .dni("12345678")
                 .rubro("Comercial")
                 .area(new BigDecimal("100.00"))
-                .archivoFoto(new byte[0])
                 .archivoPlano(new byte[0])
                 .build();
         tramiteRepository.save(tramite);
