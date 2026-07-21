@@ -24,38 +24,56 @@ public class TaskLockService {
     public boolean lockTask(String taskId, String username) {
         String key = LOCK_PREFIX + taskId;
         
-        // Use setIfAbsent to prevent race conditions
-        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(key, username, LOCK_EXPIRATION);
-        
-        if (Boolean.TRUE.equals(acquired)) {
-            return true;
-        } else {
-            // Check if already locked by the same user
-            String owner = redisTemplate.opsForValue().get(key);
-            if (username.equals(owner)) {
-                // Refresh the expiration time
-                redisTemplate.expire(key, LOCK_EXPIRATION);
+        try {
+            // Use setIfAbsent to prevent race conditions
+            Boolean acquired = redisTemplate.opsForValue().setIfAbsent(key, username, LOCK_EXPIRATION);
+            
+            if (Boolean.TRUE.equals(acquired)) {
                 return true;
+            } else {
+                // Check if already locked by the same user
+                String owner = redisTemplate.opsForValue().get(key);
+                if (username.equals(owner)) {
+                    // Refresh the expiration time
+                    redisTemplate.expire(key, LOCK_EXPIRATION);
+                    return true;
+                }
             }
+            return false;
+        } catch (Exception e) {
+            System.err.println("REDIS ERROR [lockTask]: " + e.getMessage());
+            return false;
         }
-        return false;
     }
 
     public void unlockTask(String taskId, String username) {
         String key = LOCK_PREFIX + taskId;
-        String owner = redisTemplate.opsForValue().get(key);
-        if (username.equals(owner)) {
-            redisTemplate.delete(key);
+        try {
+            String owner = redisTemplate.opsForValue().get(key);
+            if (username.equals(owner)) {
+                redisTemplate.delete(key);
+            }
+        } catch (Exception e) {
+            System.err.println("REDIS ERROR [unlockTask]: " + e.getMessage());
         }
     }
     
     public void forceUnlock(String taskId) {
         String key = LOCK_PREFIX + taskId;
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            System.err.println("REDIS ERROR [forceUnlock]: " + e.getMessage());
+        }
     }
 
     public Optional<String> getLockOwner(String taskId) {
         String key = LOCK_PREFIX + taskId;
-        return Optional.ofNullable(redisTemplate.opsForValue().get(key));
+        try {
+            return Optional.ofNullable(redisTemplate.opsForValue().get(key));
+        } catch (Exception e) {
+            System.err.println("REDIS ERROR [getLockOwner]: " + e.getMessage());
+            return Optional.empty();
+        }
     }
 }
