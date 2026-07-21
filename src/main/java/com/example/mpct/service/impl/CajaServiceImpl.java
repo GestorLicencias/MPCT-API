@@ -12,6 +12,11 @@ import com.example.mpct.repository.*;
 import com.example.mpct.service.CajaService;
 import com.example.mpct.service.InspeccionService;
 import com.example.mpct.service.InspeccionSchedulingService;
+import com.example.mpct.service.NotificacionService;
+import com.example.mpct.service.ComprobanteService;
+import com.example.mpct.service.TramiteService;
+import com.example.mpct.service.LicenciaService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -33,11 +38,12 @@ public class CajaServiceImpl implements CajaService {
     private final InspeccionService inspeccionService;
     private final InspeccionSchedulingService inspeccionSchedulingService;
     private final LicenciaRepository licenciaRepository;
-    private final com.example.mpct.service.NotificacionService notificacionService;
-    private final com.example.mpct.service.ComprobanteService comprobanteService;
-    private final com.example.mpct.service.TramiteService tramiteService;
-    private final com.example.mpct.service.LicenciaService licenciaService;
-    private final com.example.mpct.repository.PagoDetalleRepository pagoDetalleRepository;
+    private final NotificacionService notificacionService;
+    private final ComprobanteService comprobanteService;
+    private final TramiteService tramiteService;
+    private final LicenciaService licenciaService;
+    private final PagoDetalleRepository pagoDetalleRepository;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     @Transactional
@@ -320,33 +326,44 @@ public class CajaServiceImpl implements CajaService {
     @Override
     @Transactional
     public void enviarRecordatorioLicencia(String ruc) {
-        Licencia licencia = licenciaRepository.findByTramiteRuc(ruc)
-                .orElseThrow(() -> new RuntimeException("Licencia no encontrada para el RUC proporcionado"));
-
-        if (licencia.getContadorNotificaciones() != null && licencia.getContadorNotificaciones() >= 3) {
-            throw new RuntimeException("Ya se alcanzó el límite máximo de notificaciones (3) para esta licencia.");
-        }
-
-        String email = licencia.getTramite().getEmail();
-        if (email == null || email.trim().isEmpty()) {
-            System.err.println("Trámite " + licencia.getTramite().getId() + " sin email registrado, no se pudo notificar vencimiento.");
-            return;
-        }
-        String asunto = "URGENTE: Recordatorio de Licencia de Funcionamiento";
-        String estadoMsg = licencia.getEstado() == com.example.mpct.model.enums.EstadoLicencia.VENCIDA ? "ha VENCIDO" : "está PRÓXIMA A VENCER";
+        String lockKey = "lock:alerta_licencia:" + ruc;
+        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "locked", java.time.Duration.ofMinutes(1));
         
-        String mensaje = "Estimado contribuyente (" + licencia.getTramite().getRazonSocial() + "),\n\n"
-                + "La Municipalidad Provincial de Trujillo le recuerda que su Licencia de Funcionamiento Nro " 
-                + licencia.getNumeroLicencia() + " " + estadoMsg + ".\n\n"
-                + "Le solicitamos acercarse a las oficinas o iniciar el trámite de renovación en nuestra plataforma web a la brevedad "
-                + "para evitar sanciones o la clausura del local.\n\n"
-                + "Atentamente,\nÁrea de Licencias.";
+        if (Boolean.FALSE.equals(acquired)) {
+            throw new RuntimeException("Otro cajero ya está enviando el recordatorio para esta licencia en este momento.");
+        }
 
-        notificacionService.enviarEmail(email, asunto, mensaje, licencia.getTramite().getId());
+        try {
+            Licencia licencia = licenciaRepository.findByTramiteRuc(ruc)
+                    .orElseThrow(() -> new RuntimeException("Licencia no encontrada para el RUC proporcionado"));
 
-        licencia.setContadorNotificaciones((licencia.getContadorNotificaciones() == null ? 0 : licencia.getContadorNotificaciones()) + 1);
-        licencia.setUltimaNotificacionRenovacion(java.time.LocalDateTime.now());
-        licenciaRepository.save(licencia);
+            if (licencia.getContadorNotificaciones() != null && licencia.getContadorNotificaciones() >= 3) {
+                throw new RuntimeException("Ya se alcanzó el límite máximo de notificaciones (3) para esta licencia.");
+            }
+
+            String email = licencia.getTramite().getEmail();
+            if (email == null || email.trim().isEmpty()) {
+                System.err.println("Trámite " + licencia.getTramite().getId() + " sin email registrado, no se pudo notificar vencimiento.");
+                return;
+            }
+            String asunto = "URGENTE: Recordatorio de Licencia de Funcionamiento";
+            String estadoMsg = licencia.getEstado() == com.example.mpct.model.enums.EstadoLicencia.VENCIDA ? "ha VENCIDO" : "está PRÓXIMA A VENCER";
+            
+            String mensaje = "Estimado contribuyente (" + licencia.getTramite().getRazonSocial() + "),\n\n"
+                    + "La Municipalidad Provincial de Trujillo le recuerda que su Licencia de Funcionamiento Nro " 
+                    + licencia.getNumeroLicencia() + " " + estadoMsg + ".\n\n"
+                    + "Le solicitamos acercarse a las oficinas o iniciar el trámite de renovación en nuestra plataforma web a la brevedad "
+                    + "para evitar sanciones o la clausura del local.\n\n"
+                    + "Atentamente,\nÁrea de Licencias.";
+
+            notificacionService.enviarEmail(email, asunto, mensaje, licencia.getTramite().getId());
+
+            licencia.setContadorNotificaciones((licencia.getContadorNotificaciones() == null ? 0 : licencia.getContadorNotificaciones()) + 1);
+            licencia.setUltimaNotificacionRenovacion(java.time.LocalDateTime.now());
+            licenciaRepository.save(licencia);
+        } finally {
+            redisTemplate.delete(lockKey);
+        }
     }
 
     @Override
