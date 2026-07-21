@@ -348,7 +348,7 @@ public class CajaServiceImpl implements CajaService {
 
     @Override
     @Transactional
-    public String validarPagoCajero(java.util.UUID pagoId, boolean aprobado, String cajeroEmail) {
+    public String validarPagoCajero(java.util.UUID pagoId, boolean aprobado, String cajeroEmail, String motivoOverride) {
         User user = userRepository.findByEmail(cajeroEmail).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         Caja caja = cajaRepository.findByUsuarioIdAndEstado(user.getId(), EstadoCaja.ABIERTA)
                 .orElseThrow(() -> new RuntimeException("Debe abrir caja antes de validar pagos"));
@@ -358,7 +358,7 @@ public class CajaServiceImpl implements CajaService {
 
         if (aprobado) {
             pago.setEstadoPago("COMPLETADO");
-            
+            pago.setMotivoOverride(motivoOverride);
             pago = pagoRepository.save(pago);
 
             if (tramite.getRequiereInspeccion()) {
@@ -385,8 +385,16 @@ public class CajaServiceImpl implements CajaService {
             return "Pago validado y aprobado exitosamente.";
         } else {
             pago.setEstadoPago("RECHAZADO");
+            pago.setMotivoOverride(motivoOverride);
             pagoRepository.save(pago);
             tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PENDIENTE_PAGO, null);
+
+            // Enviar email de rechazo al usuario
+            if (motivoOverride != null && !motivoOverride.trim().isEmpty()) {
+                String mensaje = "Su pago para el trámite de licencia (RUC: " + tramite.getRuc() + ") ha sido rechazado.\n\nMotivo: " + motivoOverride + "\n\nPor favor ingrese al sistema para volver a intentar el pago.";
+                notificacionService.enviarEmail(tramite.getEmail(), "Pago de Trámite Rechazado", mensaje, tramite.getId());
+            }
+
             return "Pago rechazado. Trámite devuelto a pendiente de pago.";
         }
     }

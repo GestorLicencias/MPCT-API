@@ -27,6 +27,7 @@ public class AdminController {
     private final com.example.mpct.repository.CajaRepository cajaRepository;
     private final com.example.mpct.service.ComprobanteService comprobanteService;
     private final com.example.mpct.service.CajaService cajaService;
+    private final com.example.mpct.service.NotificacionService notificacionService;
 
     @GetMapping("/configuraciones")
     @PreAuthorize("hasRole('ADMIN')")
@@ -152,6 +153,13 @@ public class AdminController {
             pago.setValidadoPorAdmin(principal.getName());
             pagoRepository.save(pago);
             tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO, null);
+
+            // Enviar email de rechazo al usuario
+            if (motivoOverride != null && !motivoOverride.trim().isEmpty()) {
+                String mensaje = "Su pago para el trámite de licencia (RUC: " + tramite.getRuc() + ") ha sido rechazado.\n\nMotivo: " + motivoOverride + "\n\nPor favor ingrese al sistema para volver a intentar el pago.";
+                notificacionService.enviarEmail(tramite.getEmail(), "Pago de Trámite Rechazado", mensaje, tramite.getId());
+            }
+
             return ResponseEntity.ok(new MessageResponse("Pago rechazado. Trámite devuelto a pendiente de pago."));
         }
     }
