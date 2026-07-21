@@ -133,7 +133,6 @@ public class TramiteServiceImpl implements TramiteService {
                 .estado(EstadoTramite.PENDIENTE_PAGO)
                 .montoCobrado(precio)
                 .archivoPlano(planoBytes)
-                .archivoFoto(new byte[0])
                 .requiereInspeccion(requiereInspeccion)
                 .build();
 

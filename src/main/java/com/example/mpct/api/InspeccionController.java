@@ -84,19 +84,7 @@ public class InspeccionController {
         tramiteDto.put("observacionesGenerales", insp.getTramite().getObservacionesGenerales());
         tramiteDto.put("archivosObservados", insp.getTramite().getArchivosObservados());
         
-        // Mapear URLs de fotos si existen
-        if (insp.getTramite().getArchivoFoto() != null) {
-            tramiteDto.put("archivoFotoUrl", "/api/v1/tramites/" + insp.getTramite().getRuc() + "/archivos/foto");
-        }
-        if (insp.getTramite().getArchivoFoto2() != null) {
-            tramiteDto.put("archivoFoto2Url", "/api/v1/tramites/" + insp.getTramite().getRuc() + "/archivos/foto2");
-        }
-        if (insp.getTramite().getArchivoFoto3() != null) {
-            tramiteDto.put("archivoFoto3Url", "/api/v1/tramites/" + insp.getTramite().getRuc() + "/archivos/foto3");
-        }
-        if (insp.getTramite().getArchivoFoto4() != null) {
-            tramiteDto.put("archivoFoto4Url", "/api/v1/tramites/" + insp.getTramite().getRuc() + "/archivos/foto4");
-        }
+
 
         dto.put("tramite", tramiteDto);
         return dto;
