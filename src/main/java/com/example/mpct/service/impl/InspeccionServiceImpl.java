@@ -82,7 +82,8 @@ public class InspeccionServiceImpl implements InspeccionService {
             if (inspeccion.getNumeroInspeccion() == 1) {
                 tramite.setFechaLimiteSubsanacion(sumarDiasHabiles(LocalDateTime.now(), 30));
                 tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.OBSERVADO, observaciones);
-                // La 2da visita se programará automáticamente cuando el usuario subsane (actualice archivos)
+                // La 2da visita se programa automáticamente de forma incondicional a los 30 días hábiles
+                inspeccionSchedulingService.programarInspeccion(tramite, 2, 30);
             } else {
                 // Segunda inspección desaprobada = Trámite Rechazado
                 tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.RECHAZADO, "Segunda inspección desaprobada.");
