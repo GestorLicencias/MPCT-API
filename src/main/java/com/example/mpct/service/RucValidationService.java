@@ -102,7 +102,13 @@ public class RucValidationService {
                     .orElse(null);
 
             if (gerente == null) {
-                return ValidacionRucResponse.builder().valido(false).mensaje("No se encontró Gerente General registrado.").build();
+                return ValidacionRucResponse.builder()
+                        .valido(true)
+                        .mensaje("RUC Válido. Inserte manualmente los datos del representante.")
+                        .ruc(ruc)
+                        .razonSocial((String) dataRuc.get("nombre_o_razon_social"))
+                        .domicilioFiscal((String) dataRuc.get("direccion_completa"))
+                        .build();
             }
 
             // Todo OK. Retornar éxito
