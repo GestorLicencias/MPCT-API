@@ -1,5 +1,6 @@
 package com.example.mpct.dto.tramite;
 
+import com.example.mpct.model.enums.EstadoLicencia;
 import com.example.mpct.model.enums.EstadoTramite;
 import com.example.mpct.model.enums.TipoTramite;
 
@@ -26,6 +27,8 @@ public record TramiteResponse(
         String archivosObservados,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        Boolean pagoRechazado
+        Boolean pagoRechazado,
+        EstadoLicencia estadoLicencia,
+        LocalDateTime fechaVencimientoLicencia
 ) {
 }

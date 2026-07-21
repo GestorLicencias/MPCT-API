@@ -273,8 +273,16 @@ public class TramiteServiceImpl implements TramiteService {
 
     private TramiteResponse mapToResponse(Tramite t) {
         String certUrl = null;
+        com.example.mpct.model.enums.EstadoLicencia estadoLicencia = null;
+        LocalDateTime fechaVencimiento = null;
+        
         if (t.getEstado() == EstadoTramite.APROBADO) {
             certUrl = "/api/v1/tramites/" + t.getRuc() + "/certificado";
+            java.util.Optional<Licencia> licenciaOpt = licenciaRepository.findByTramiteId(t.getId());
+            if (licenciaOpt.isPresent()) {
+                estadoLicencia = licenciaOpt.get().getEstado();
+                fechaVencimiento = licenciaOpt.get().getFechaVencimiento();
+            }
         }
         
         boolean pagoRechazado = pagoRepository.findByTramiteId(t.getId())
@@ -290,7 +298,9 @@ public class TramiteServiceImpl implements TramiteService {
                 t.getObservacionesGenerales(),
                 t.getArchivosObservados(),
                 t.getCreatedAt(), t.getUpdatedAt(),
-                pagoRechazado
+                pagoRechazado,
+                estadoLicencia,
+                fechaVencimiento
         );
     }
 
