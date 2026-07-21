@@ -67,24 +67,28 @@ public class Tramite {
     @Basic(fetch = FetchType.LAZY)
     @Column(nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnore
+    @Deprecated
     private byte[] archivoFoto;
 
     @Lob
     @Basic(fetch = FetchType.LAZY)
     @Column(nullable = true)
     @com.fasterxml.jackson.annotation.JsonIgnore
+    @Deprecated
     private byte[] archivoFoto2;
 
     @Lob
     @Basic(fetch = FetchType.LAZY)
     @Column(nullable = true)
     @com.fasterxml.jackson.annotation.JsonIgnore
+    @Deprecated
     private byte[] archivoFoto3;
 
     @Lob
     @Basic(fetch = FetchType.LAZY)
     @Column(nullable = true)
     @com.fasterxml.jackson.annotation.JsonIgnore
+    @Deprecated
     private byte[] archivoFoto4;
 
     @OneToMany(mappedBy = "tramite", cascade = CascadeType.ALL, orphanRemoval = true)

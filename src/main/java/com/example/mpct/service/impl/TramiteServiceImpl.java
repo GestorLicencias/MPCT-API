@@ -33,7 +33,7 @@ public class TramiteServiceImpl implements TramiteService {
     private final NotificacionService notificacionService;
 
     @Transactional
-    public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, String email, BigDecimal area, TipoTramite tipo, MultipartFile plano, java.util.List<MultipartFile> fotos) {
+    public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, String email, BigDecimal area, TipoTramite tipo, MultipartFile plano) {
         
         // --- Validación por tipo de trámite (NUEVO vs RENOVACION) ---
         java.util.Optional<Licencia> licenciaPreviaOpt = licenciaRepository.findByTramiteRuc(ruc);
@@ -180,22 +180,11 @@ public class TramiteServiceImpl implements TramiteService {
 
         try {
             if (plano != null && !plano.isEmpty()) {
+            try {
                 tramite.setArchivoPlano(plano.getBytes());
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Error al procesar el archivo plano");
             }
-            if (foto != null && !foto.isEmpty()) {
-                tramite.setArchivoFoto(foto.getBytes());
-            }
-            if (foto2 != null && !foto2.isEmpty()) {
-                tramite.setArchivoFoto2(foto2.getBytes());
-            }
-            if (foto3 != null && !foto3.isEmpty()) {
-                tramite.setArchivoFoto3(foto3.getBytes());
-            }
-            if (foto4 != null && !foto4.isEmpty()) {
-                tramite.setArchivoFoto4(foto4.getBytes());
-            }
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("Error procesando archivos: " + e.getMessage());
         }
 
         tramite.setObservacionesGenerales(null);
@@ -297,10 +286,6 @@ public class TramiteServiceImpl implements TramiteService {
                 t.getDni(), t.getEmail(), t.getArea(),
                 t.getTipo(), t.getEstado(), t.getMontoCobrado(),
                 "/api/v1/tramites/" + t.getRuc() + "/archivos/plano",
-                "/api/v1/tramites/" + t.getRuc() + "/archivos/foto",
-                t.getArchivoFoto2() != null ? "/api/v1/tramites/" + t.getRuc() + "/archivos/foto2" : null,
-                t.getArchivoFoto3() != null ? "/api/v1/tramites/" + t.getRuc() + "/archivos/foto3" : null,
-                t.getArchivoFoto4() != null ? "/api/v1/tramites/" + t.getRuc() + "/archivos/foto4" : null,
                 certUrl,
                 t.getObservacionesGenerales(),
                 t.getArchivosObservados(),
