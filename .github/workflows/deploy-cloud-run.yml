@@ -62,5 +62,10 @@ jobs:
             FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             BACKEND_URL=${{ secrets.BACKEND_URL }}
             JSON_PE_API_KEY=${{ secrets.JSON_PE_API_KEY }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_USER=${{ secrets.REDIS_USER }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            REDIS_SSL=${{ secrets.REDIS_SSL }}
           # Cloud Run allocate 2GB of memory since Playwright requires it for browser instances
           flags: '--allow-unauthenticated --memory=2Gi'
