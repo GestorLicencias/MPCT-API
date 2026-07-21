@@ -96,14 +96,7 @@ public class RucValidationService {
             }
 
             List<Map<String, String>> representantes = (List<Map<String, String>>) response2.get("data");
-            Map<String, String> gerente = representantes.stream()
-                    .filter(r -> {
-                        if (r.get("cargo") == null) return false;
-                        String cargo = r.get("cargo").toUpperCase();
-                        return cargo.contains("GERENTE") || cargo.contains("TITULAR") || cargo.contains("ADMINISTRADOR") || cargo.contains("REPRESENTANTE");
-                    })
-                    .findFirst()
-                    .orElse(representantes.isEmpty() ? null : representantes.get(0));
+            Map<String, String> gerente = representantes != null && !representantes.isEmpty() ? representantes.get(0) : null;
 
             if (gerente == null) {
                 return ValidacionRucResponse.builder()
