@@ -120,7 +120,7 @@ public class InspeccionServiceImpl implements InspeccionService {
 
     @Override
     public java.util.List<Inspeccion> obtenerInspeccionesDelDia(User inspector) {
-        return inspeccionRepository.findByInspectorIdAndEstadoAndFechaProgramada(inspector.getId(), EstadoInspeccion.PROGRAMADA, LocalDateTime.now());
+        return inspeccionRepository.findByEstadoAndFechaProgramada(EstadoInspeccion.PROGRAMADA, LocalDateTime.now());
     }
 
     @Override

@@ -29,7 +29,7 @@ public class InspeccionController {
     ) {
         var inspecciones = soloHoy ? 
                 inspeccionService.obtenerInspeccionesDelDia(getCurrentUser()) : 
-                inspeccionService.obtenerTodasInspeccionesPendientes(getCurrentUser());
+                inspeccionService.obtenerInspeccionesPendientes();
         var dtos = inspecciones.stream().map(this::mapInspeccionToDto).toList();
         return ResponseEntity.ok(dtos);
     }
