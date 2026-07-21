@@ -89,18 +89,30 @@ public class ScheduledJobsService {
     @Scheduled(cron = "0 0 7 * * ?")
     @Transactional
     public void notificarLicenciasPorVencer() {
-        LocalDate limite = LocalDate.now().plusDays(30);
+        LocalDate limite = LocalDate.now().plusDays(3);
         List<Licencia> licencias = licenciaRepository.findAll();
         
         for (Licencia lic : licencias) {
             if (lic.getEstado() == EstadoLicencia.VIGENTE && lic.getFechaVencimiento().toLocalDate().isEqual(limite)) {
+                // Verificar que no tenga renovación en curso
+                if (tramiteRepository.existsByRucAndTipoAndEstadoNot(
+                        lic.getTramite().getRuc(),
+                        com.example.mpct.model.enums.TipoTramite.RENOVACION,
+                        com.example.mpct.model.enums.EstadoTramite.RECHAZADO)) {
+                    continue; // Ya inició el trámite, no notificar
+                }
+
                 String ruc = lic.getTramite().getRuc();
                 String negocioEmail = lic.getTramite().getEmail();
-                String asunto = "Aviso: Su Licencia de Funcionamiento está por vencer - " + ruc;
+                String asunto = "Aviso: Su Licencia de Funcionamiento está por vencer en 3 días - " + ruc;
                 String mensaje = "Le informamos que su licencia de funcionamiento Nro " + lic.getNumeroLicencia() 
-                        + " vencerá en 30 días. Le sugerimos iniciar el trámite de renovación pronto.";
+                        + " vencerá en 3 días. Le solicitamos iniciar el trámite de renovación en nuestra plataforma web a la brevedad.";
                 if (negocioEmail != null && !negocioEmail.trim().isEmpty()) {
                     notificacionService.enviarEmail(negocioEmail, asunto, mensaje, lic.getTramite().getId());
+                    
+                    lic.setContadorNotificaciones((lic.getContadorNotificaciones() == null ? 0 : lic.getContadorNotificaciones()) + 1);
+                    lic.setUltimaNotificacionRenovacion(java.time.LocalDateTime.now());
+                    licenciaRepository.save(lic);
                 } else {
                     System.err.println("Trámite " + lic.getTramite().getId() + " sin email registrado, no se pudo notificar por vencer.");
                 }

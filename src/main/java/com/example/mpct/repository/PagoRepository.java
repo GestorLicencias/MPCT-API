@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface PagoRepository extends JpaRepository<Pago, UUID> {
     Optional<Pago> findByTramiteId(UUID tramiteId);
     java.util.List<Pago> findByEstadoPago(String estadoPago);
+    boolean existsByNumeroComprobante(String numeroComprobante);
 }

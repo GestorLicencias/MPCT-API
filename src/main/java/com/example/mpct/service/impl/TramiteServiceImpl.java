@@ -113,7 +113,13 @@ public class TramiteServiceImpl implements TramiteService {
 
         BigDecimal precio;
         if (tipo == TipoTramite.RENOVACION) {
-            precio = new BigDecimal("90.00");
+            precio = configuracionRepository.findByClave("PRECIO_RENOVACION")
+                    .map(com.example.mpct.model.entity.Configuracion::getValor)
+                    .orElse(new BigDecimal("90.00"));
+        } else if (tipo == TipoTramite.MODIFICACION) {
+            precio = configuracionRepository.findByClave("PRECIO_MODIFICACION")
+                    .map(com.example.mpct.model.entity.Configuracion::getValor)
+                    .orElse(new BigDecimal("120.00"));
         } else {
             precio = configuracionRepository.findByClave("PRECIO_LICENCIA")
                     .map(com.example.mpct.model.entity.Configuracion::getValor)
@@ -207,8 +213,11 @@ public class TramiteServiceImpl implements TramiteService {
             if (numeroComprobante == null || numeroComprobante.trim().isEmpty()) {
                 throw new RuntimeException("El número de comprobante es obligatorio para pagos por Banco de la Nación");
             }
+            if (pagoRepository.existsByNumeroComprobante(numeroComprobante.trim())) {
+                throw new RuntimeException("Este número de comprobante es incorrecto o ya ha sido utilizado. Ingrese otro.");
+            }
             pago.setEstadoPago("PENDIENTE");
-            pago.setNumeroComprobante(numeroComprobante);
+            pago.setNumeroComprobante(numeroComprobante.trim());
             try {
                 pago.setArchivoVoucher(voucher.getBytes());
             } catch (java.io.IOException e) {

@@ -22,9 +22,25 @@ public class DataInitializer implements CommandLineRunner {
             com.example.mpct.model.entity.Configuracion confLicencia = com.example.mpct.model.entity.Configuracion.builder()
                     .clave("PRECIO_LICENCIA")
                     .valor(new java.math.BigDecimal("180.00"))
-                    .descripcion("Precio base para la Licencia de Funcionamiento")
+                    .descripcion("Precio base para la Licencia de Funcionamiento Nueva")
                     .build();
             configuracionRepository.save(confLicencia);
+        }
+        if (configuracionRepository.findByClave("PRECIO_RENOVACION").isEmpty()) {
+            com.example.mpct.model.entity.Configuracion confRenovacion = com.example.mpct.model.entity.Configuracion.builder()
+                    .clave("PRECIO_RENOVACION")
+                    .valor(new java.math.BigDecimal("90.00"))
+                    .descripcion("Precio para la Renovación de Licencia")
+                    .build();
+            configuracionRepository.save(confRenovacion);
+        }
+        if (configuracionRepository.findByClave("PRECIO_MODIFICACION").isEmpty()) {
+            com.example.mpct.model.entity.Configuracion confModificacion = com.example.mpct.model.entity.Configuracion.builder()
+                    .clave("PRECIO_MODIFICACION")
+                    .valor(new java.math.BigDecimal("120.00"))
+                    .descripcion("Precio para la Modificación de Solicitud/Licencia")
+                    .build();
+            configuracionRepository.save(confModificacion);
         }
 
         // AUTO-FIX: Migrar trámites PAGADOS que no tengan inspección (por el bug anterior)

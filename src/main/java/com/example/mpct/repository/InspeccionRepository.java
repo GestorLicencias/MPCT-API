@@ -11,18 +11,18 @@ import java.util.UUID;
 public interface InspeccionRepository extends JpaRepository<Inspeccion, UUID> {
     List<Inspeccion> findByTramiteId(UUID tramiteId);
     List<Inspeccion> findByInspectorId(UUID inspectorId);
-    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite WHERE i.estado = :estado")
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite WHERE i.estado = :estado ORDER BY i.fechaProgramada ASC")
     List<Inspeccion> findByEstado(com.example.mpct.model.enums.EstadoInspeccion estado);
 
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(i) FROM Inspeccion i WHERE i.inspector.id = :inspectorId AND CAST(i.fechaProgramada AS date) = CAST(:fecha AS date)")
     long countByInspectorIdAndFechaProgramada(@org.springframework.data.repository.query.Param("inspectorId") java.util.UUID inspectorId, @org.springframework.data.repository.query.Param("fecha") java.time.LocalDateTime fecha);
 
-    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite t WHERE i.inspector.id = :inspectorId AND i.estado = :estado AND t.estado NOT IN (com.example.mpct.model.enums.EstadoTramite.RECHAZADO, com.example.mpct.model.enums.EstadoTramite.ABANDONADO)")
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite t WHERE i.inspector.id = :inspectorId AND i.estado = :estado AND t.estado NOT IN (com.example.mpct.model.enums.EstadoTramite.RECHAZADO, com.example.mpct.model.enums.EstadoTramite.ABANDONADO) ORDER BY i.fechaProgramada ASC")
     List<Inspeccion> findByInspectorIdAndEstado(@org.springframework.data.repository.query.Param("inspectorId") java.util.UUID inspectorId, @org.springframework.data.repository.query.Param("estado") com.example.mpct.model.enums.EstadoInspeccion estado);
 
-    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite t WHERE i.inspector.id = :inspectorId AND i.estado = :estado AND CAST(i.fechaProgramada AS date) <= CAST(:fecha AS date) AND t.estado NOT IN (com.example.mpct.model.enums.EstadoTramite.RECHAZADO, com.example.mpct.model.enums.EstadoTramite.ABANDONADO)")
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite t WHERE i.inspector.id = :inspectorId AND i.estado = :estado AND CAST(i.fechaProgramada AS date) = CAST(:fecha AS date) AND t.estado NOT IN (com.example.mpct.model.enums.EstadoTramite.RECHAZADO, com.example.mpct.model.enums.EstadoTramite.ABANDONADO) ORDER BY i.fechaProgramada ASC")
     List<Inspeccion> findByInspectorIdAndEstadoAndFechaProgramada(@org.springframework.data.repository.query.Param("inspectorId") java.util.UUID inspectorId, @org.springframework.data.repository.query.Param("estado") com.example.mpct.model.enums.EstadoInspeccion estado, @org.springframework.data.repository.query.Param("fecha") java.time.LocalDateTime fecha);
 
-    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite t WHERE i.estado = :estado AND CAST(i.fechaProgramada AS date) <= CAST(:fecha AS date) AND t.estado NOT IN (com.example.mpct.model.enums.EstadoTramite.RECHAZADO, com.example.mpct.model.enums.EstadoTramite.ABANDONADO)")
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM Inspeccion i JOIN FETCH i.tramite t WHERE i.estado = :estado AND CAST(i.fechaProgramada AS date) = CAST(:fecha AS date) AND t.estado NOT IN (com.example.mpct.model.enums.EstadoTramite.RECHAZADO, com.example.mpct.model.enums.EstadoTramite.ABANDONADO) ORDER BY i.fechaProgramada ASC")
     List<Inspeccion> findByEstadoAndFechaProgramada(@org.springframework.data.repository.query.Param("estado") com.example.mpct.model.enums.EstadoInspeccion estado, @org.springframework.data.repository.query.Param("fecha") java.time.LocalDateTime fecha);
 }

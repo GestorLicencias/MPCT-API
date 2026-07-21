@@ -47,4 +47,11 @@ public class Licencia {
     @Column(nullable = false)
     @Builder.Default
     private EstadoLicencia estado = EstadoLicencia.VIGENTE;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer contadorNotificaciones = 0;
+
+    @Column
+    private LocalDateTime ultimaNotificacionRenovacion;
 }

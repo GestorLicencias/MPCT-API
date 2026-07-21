@@ -268,21 +268,26 @@ public class CajaServiceImpl implements CajaService {
     public java.util.List<java.util.Map<String, Object>> obtenerAlertasLicencias() {
         List<java.util.Map<String, Object>> alertas = new java.util.ArrayList<>();
         
+        java.time.LocalDateTime ahora = java.time.LocalDateTime.now();
+        java.time.LocalDateTime limite = ahora.plusDays(3);
+        java.time.LocalDateTime limiteNotificacion = ahora.minusHours(5);
+
         List<Licencia> vencidas = licenciaRepository.findByEstado(com.example.mpct.model.enums.EstadoLicencia.VENCIDA);
         for(Licencia l : vencidas) {
-             alertas.add(java.util.Map.of(
-                 "ruc", l.getTramite().getRuc(),
-                 "razonSocial", l.getTramite().getRazonSocial(),
-                 "numeroLicencia", l.getNumeroLicencia(),
-                 "fechaVencimiento", l.getFechaVencimiento().toString(),
-                 "estado", "VENCIDA"
-             ));
+            if (debeMostrarAlerta(l, limiteNotificacion)) {
+                alertas.add(java.util.Map.of(
+                    "ruc", l.getTramite().getRuc(),
+                    "razonSocial", l.getTramite().getRazonSocial(),
+                    "numeroLicencia", l.getNumeroLicencia(),
+                    "fechaVencimiento", l.getFechaVencimiento().toString(),
+                    "estado", "VENCIDA"
+                ));
+            }
         }
         
-        java.time.LocalDateTime limite = java.time.LocalDateTime.now().plusDays(30);
         List<Licencia> vigentes = licenciaRepository.findByEstado(com.example.mpct.model.enums.EstadoLicencia.VIGENTE);
         for(Licencia l : vigentes) {
-             if (l.getFechaVencimiento().isBefore(limite)) {
+             if (l.getFechaVencimiento().isBefore(limite) && debeMostrarAlerta(l, limiteNotificacion)) {
                  alertas.add(java.util.Map.of(
                      "ruc", l.getTramite().getRuc(),
                      "razonSocial", l.getTramite().getRazonSocial(),
@@ -296,11 +301,31 @@ public class CajaServiceImpl implements CajaService {
         return alertas;
     }
 
+    private boolean debeMostrarAlerta(Licencia l, java.time.LocalDateTime limiteNotificacion) {
+        if (l.getContadorNotificaciones() != null && l.getContadorNotificaciones() >= 3) {
+            return false;
+        }
+        if (l.getUltimaNotificacionRenovacion() != null && l.getUltimaNotificacionRenovacion().isAfter(limiteNotificacion)) {
+            return false;
+        }
+        if (tramiteRepository.existsByRucAndTipoAndEstadoNot(
+                l.getTramite().getRuc(), 
+                com.example.mpct.model.enums.TipoTramite.RENOVACION, 
+                com.example.mpct.model.enums.EstadoTramite.RECHAZADO)) {
+            return false;
+        }
+        return true;
+    }
+
     @Override
     @Transactional
     public void enviarRecordatorioLicencia(String ruc) {
         Licencia licencia = licenciaRepository.findByTramiteRuc(ruc)
                 .orElseThrow(() -> new RuntimeException("Licencia no encontrada para el RUC proporcionado"));
+
+        if (licencia.getContadorNotificaciones() != null && licencia.getContadorNotificaciones() >= 3) {
+            throw new RuntimeException("Ya se alcanzó el límite máximo de notificaciones (3) para esta licencia.");
+        }
 
         String email = licencia.getTramite().getEmail();
         if (email == null || email.trim().isEmpty()) {
@@ -318,6 +343,10 @@ public class CajaServiceImpl implements CajaService {
                 + "Atentamente,\nÁrea de Licencias.";
 
         notificacionService.enviarEmail(email, asunto, mensaje, licencia.getTramite().getId());
+
+        licencia.setContadorNotificaciones((licencia.getContadorNotificaciones() == null ? 0 : licencia.getContadorNotificaciones()) + 1);
+        licencia.setUltimaNotificacionRenovacion(java.time.LocalDateTime.now());
+        licenciaRepository.save(licencia);
     }
 
     @Override

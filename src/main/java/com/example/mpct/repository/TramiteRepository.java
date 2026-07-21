@@ -13,4 +13,5 @@ import java.util.UUID;
 public interface TramiteRepository extends JpaRepository<Tramite, UUID> {
     Optional<Tramite> findTopByRucOrderByCreatedAtDesc(String ruc);
     List<Tramite> findByEstado(EstadoTramite estado);
+    boolean existsByRucAndTipoAndEstadoNot(String ruc, com.example.mpct.model.enums.TipoTramite tipo, EstadoTramite estado);
 }
