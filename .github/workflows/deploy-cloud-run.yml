@@ -61,5 +61,6 @@ jobs:
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
             FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             BACKEND_URL=${{ secrets.BACKEND_URL }}
+            JSON_PE_API_KEY=${{ secrets.JSON_PE_API_KEY }}
           # Cloud Run allocate 2GB of memory since Playwright requires it for browser instances
           flags: '--allow-unauthenticated --memory=2Gi'
