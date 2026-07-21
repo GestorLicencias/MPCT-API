@@ -120,7 +120,7 @@ public class TramiteServiceImpl implements TramiteService {
                     .orElse(new BigDecimal("180.00"));
         }
 
-        boolean requiereInspeccion = (tipo == TipoTramite.MODIFICACION || tipo == TipoTramite.TRASLADO);
+        boolean requiereInspeccion = true; // Se requiere inspección para todo trámite (NUEVO, RENOVACION, MODIFICACION, TRASLADO)
 
         Tramite tramite = Tramite.builder()
                 .ruc(ruc)
