@@ -22,7 +22,7 @@ import java.util.UUID;
 public class TramiteServiceImpl implements TramiteService {
 
     private final TramiteRepository tramiteRepository;
-    private final SunatScrapingService sunatScrapingService;
+    private final RucValidationService rucValidationService;
     private final PagoRepository pagoRepository;
     private final InspeccionService inspeccionService;
     private final LicenciaRepository licenciaRepository;
@@ -86,11 +86,14 @@ public class TramiteServiceImpl implements TramiteService {
             }
         }
 
-        SunatRucResponse sunatData = sunatScrapingService.validarRuc(ruc);
+        com.example.mpct.dto.tramite.ValidacionRucResponse validacion = rucValidationService.validarRuc(ruc, "internal-creation");
+        if (!validacion.isValido()) {
+            throw new RuntimeException("RUC Inválido: " + validacion.getMensaje());
+        }
 
         byte[] planoBytes = null;
 
-        String finalDomicilio = sunatData.domicilioFiscal();
+        String finalDomicilio = validacion.getDomicilioFiscal() != null ? validacion.getDomicilioFiscal() : "No registrado";
         BigDecimal finalArea = area;
 
         try {
@@ -119,7 +122,7 @@ public class TramiteServiceImpl implements TramiteService {
 
         Tramite tramite = Tramite.builder()
                 .ruc(ruc)
-                .razonSocial(sunatData.razonSocial())
+                .razonSocial(validacion.getRazonSocial())
                 .domicilioFiscal(finalDomicilio)
                 .representanteLegal(representanteLegal)
                 .dni(dni)
