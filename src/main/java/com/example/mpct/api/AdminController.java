@@ -91,7 +91,12 @@ public class AdminController {
         // Filtrar por estado del trámite para excluir trámites muertos/terminales
         pendientes = pendientes.stream()
                 .filter(p -> p.getTramite().getEstado() == com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO || p.getTramite().getEstado() == com.example.mpct.model.enums.EstadoTramite.VALIDANDO_PAGO)
-                .sorted((a, b) -> b.getFechaPago().compareTo(a.getFechaPago()))
+                .sorted((a, b) -> {
+                    if (a.getFechaPago() == null && b.getFechaPago() == null) return 0;
+                    if (a.getFechaPago() == null) return 1;
+                    if (b.getFechaPago() == null) return -1;
+                    return b.getFechaPago().compareTo(a.getFechaPago());
+                })
                 .toList();
         
         List<java.util.Map<String, Object>> response = pendientes.stream().map(p -> {
@@ -291,7 +296,25 @@ public class AdminController {
         return ResponseEntity.ok(new MessageResponse(newStatus ? "Usuario reactivado exitosamente" : "Usuario suspendido exitosamente"));
     }
     
+    @PatchMapping("/usuarios/{id}/password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> resetUserPassword(
+            @PathVariable java.util.UUID id,
+            @RequestBody AdminResetPasswordRequest request
+    ) {
+        if (request.newPassword() == null || request.newPassword().trim().length() < 6) {
+            return ResponseEntity.badRequest().body(new MessageResponse("La contraseña debe tener al menos 6 caracteres."));
+        }
+        com.example.mpct.model.entity.User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        return ResponseEntity.ok(new MessageResponse("Contraseña de usuario actualizada exitosamente."));
+    }
+    
     public record ValidarPagoAdminRequest(boolean aprobado, String motivoOverride) {}
     public record UsuarioEstadoRequest(boolean isActive, String motivoSuspension) {}
+    public record AdminResetPasswordRequest(String newPassword) {}
     public record MessageResponse(String message) {}
 }
