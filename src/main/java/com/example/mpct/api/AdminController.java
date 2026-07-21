@@ -286,10 +286,6 @@ public class AdminController {
             user.setMotivoSuspension(request.motivoSuspension().trim());
             user.setSuspendidoPorAdmin(adminActual.getId().toString());
             user.setFechaSuspension(java.time.LocalDateTime.now());
-        } else {
-            user.setMotivoSuspension(null);
-            user.setSuspendidoPorAdmin(null);
-            user.setFechaSuspension(null);
         }
         
         userRepository.save(user);
