@@ -20,8 +20,11 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import org.springframework.test.context.ActiveProfiles;
+
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("local")
 public class E2EFlujosIntegrationTest {
 
     @Autowired
@@ -36,13 +39,19 @@ public class E2EFlujosIntegrationTest {
     @Autowired
     private com.example.mpct.repository.PagoRepository pagoRepository;
 
+    @Autowired
+    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
     private static final String RUC_TEST = "20123456789";
 
     @AfterEach
     void cleanup() {
-        tramiteRepository.findTopByRucOrderByCreatedAtDesc(RUC_TEST).ifPresent(t -> {
-            pagoRepository.findByTramiteId(t.getId()).ifPresent(p -> pagoRepository.delete(p));
-            tramiteRepository.delete(t);
+        transactionTemplate.execute(status -> {
+            tramiteRepository.findTopByRucOrderByCreatedAtDesc(RUC_TEST).ifPresent(t -> {
+                pagoRepository.findByTramiteId(t.getId()).ifPresent(p -> pagoRepository.delete(p));
+                tramiteRepository.delete(t);
+            });
+            return null;
         });
     }
 
@@ -66,6 +75,7 @@ public class E2EFlujosIntegrationTest {
                 .param("representanteLegal", "Juan Perez")
                 .param("rubro", "Ventas")
                 .param("dni", "12345678")
+                .param("email", "test@example.com")
                 .param("area", "150.00")
                 .param("tipo", "NUEVO"))
                 .andExpect(status().isOk())

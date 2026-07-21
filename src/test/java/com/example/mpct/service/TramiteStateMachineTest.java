@@ -30,6 +30,18 @@ public class TramiteStateMachineTest {
     @Mock
     private TramiteRepository tramiteRepository;
 
+    @Mock
+    private com.example.mpct.service.TramiteService tramiteService;
+
+    @Mock
+    private com.example.mpct.repository.FeriadoRepository feriadoRepository;
+
+    @Mock
+    private InspeccionSchedulingService inspeccionSchedulingService;
+
+    @Mock
+    private LicenciaService licenciaService;
+
     @InjectMocks
     private InspeccionServiceImpl inspeccionService;
 
@@ -46,13 +58,14 @@ public class TramiteStateMachineTest {
         inspeccion.setEstado(EstadoInspeccion.PROGRAMADA);
 
         when(inspeccionRepository.findById(inspeccion.getId())).thenReturn(Optional.of(inspeccion));
-        when(tramiteRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
         when(inspeccionRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+        when(feriadoRepository.existsByFecha(any())).thenReturn(false);
 
         inspeccionService.evaluarInspeccion(new User(), inspeccion.getId(), false, "Falta extintor", "foto.jpg");
 
-        assertEquals(EstadoTramite.OBSERVADO, tramite.getEstado());
+        verify(tramiteService, times(1)).actualizarEstadoTramite(eq(tramite), eq(EstadoTramite.OBSERVADO), eq("Falta extintor"));
         assertEquals(EstadoInspeccion.OBSERVADA, inspeccion.getEstado());
+        verify(inspeccionSchedulingService, times(1)).programarInspeccion(eq(tramite), eq(2), eq(30));
     }
 
     @Test
@@ -68,15 +81,15 @@ public class TramiteStateMachineTest {
         inspeccion.setEstado(EstadoInspeccion.PROGRAMADA);
 
         when(inspeccionRepository.findById(inspeccion.getId())).thenReturn(Optional.of(inspeccion));
-        when(tramiteRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
         when(inspeccionRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         inspeccionService.evaluarInspeccion(new User(), inspeccion.getId(), false, "Sigue sin extintor", "foto2.jpg");
 
-        // Regla: 2 observaciones -> TERMINADO
-        assertEquals(EstadoTramite.TERMINADO, tramite.getEstado());
+        // Regla: 2 observaciones -> TERMINADO (Rechazado)
+        verify(tramiteService, times(1)).actualizarEstadoTramite(eq(tramite), eq(EstadoTramite.RECHAZADO), eq("Segunda inspección desaprobada."));
         assertEquals(EstadoInspeccion.OBSERVADA, inspeccion.getEstado());
         
-        // No se debe haber programado una 3era (solo si hubiera lógica aquí, pero comprobamos el estado)
+        // No se debe haber programado una 3era
+        verify(inspeccionSchedulingService, never()).programarInspeccion(any(), anyInt(), anyInt());
     }
 }

@@ -51,4 +51,15 @@ public class CajaController {
         cajaService.enviarRecordatorioLicencia(ruc);
         return ResponseEntity.ok(java.util.Map.of("message", "Recordatorio enviado exitosamente"));
     }
+
+    @PostMapping("/pagos/{id}/validar")
+    @PreAuthorize("hasRole('CAJERO')")
+    public ResponseEntity<?> validarPago(@PathVariable java.util.UUID id, @RequestParam("aprobado") boolean aprobado, Principal principal) {
+        try {
+            String mensaje = cajaService.validarPagoCajero(id, aprobado, principal.getName());
+            return ResponseEntity.ok(java.util.Map.of("message", mensaje));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
 }

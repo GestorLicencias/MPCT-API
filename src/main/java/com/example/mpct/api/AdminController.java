@@ -25,6 +25,8 @@ public class AdminController {
     private final com.example.mpct.service.TramiteService tramiteService;
     private final com.example.mpct.service.AuthService authService;
     private final com.example.mpct.repository.CajaRepository cajaRepository;
+    private final com.example.mpct.service.ComprobanteService comprobanteService;
+    private final com.example.mpct.service.CajaService cajaService;
 
     @GetMapping("/configuraciones")
     @PreAuthorize("hasRole('ADMIN')")
@@ -93,27 +95,43 @@ public class AdminController {
     @PostMapping("/pagos/{id}/validar")
     @PreAuthorize("hasRole('ADMIN')")
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<?> validarPago(@PathVariable java.util.UUID id, @RequestParam("aprobado") boolean aprobado) {
+    public ResponseEntity<?> validarPago(
+            @PathVariable java.util.UUID id, 
+            @RequestParam("aprobado") boolean aprobado,
+            @RequestParam(value = "motivoOverride", required = false) String motivoOverride,
+            java.security.Principal principal
+    ) {
+        if (aprobado && (motivoOverride == null || motivoOverride.trim().isEmpty())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Debe especificar un motivoOverride para validar pagos administrativamente."));
+        }
+
         com.example.mpct.model.entity.Pago pago = pagoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
         com.example.mpct.model.entity.Tramite tramite = pago.getTramite();
 
         if (aprobado) {
             pago.setEstadoPago("COMPLETADO");
+            pago.setMotivoOverride(motivoOverride);
+            pago.setValidadoPorAdmin(principal.getName());
+
+            pago = pagoRepository.save(pago);
             if (tramite.getRequiereInspeccion()) {
-                tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION);
+                tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION, null);
             } else {
-                tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PAGADO);
+                tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PAGADO, null);
                 inspeccionService.programarInspeccionInicial(tramite);
             }
-            pagoRepository.save(pago);
-            tramiteRepository.save(tramite);
-            return ResponseEntity.ok(new MessageResponse("Pago aprobado. " + (tramite.getRequiereInspeccion() ? "Trámite pendiente de revisión." : "Trámite pagado.")));
+            
+            // Generar Comprobante interno
+            comprobanteService.generarYGuardar(pago);
+            
+            return ResponseEntity.ok(new MessageResponse("Pago aprobado por override. " + (tramite.getRequiereInspeccion() ? "Trámite pendiente de revisión." : "Trámite pagado.")));
         } else {
             pago.setEstadoPago("RECHAZADO");
-            tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO);
+            pago.setMotivoOverride(motivoOverride);
+            pago.setValidadoPorAdmin(principal.getName());
             pagoRepository.save(pago);
-            tramiteRepository.save(tramite);
+            tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_PAGO, null);
             return ResponseEntity.ok(new MessageResponse("Pago rechazado. Trámite devuelto a pendiente de pago."));
         }
     }
@@ -177,6 +195,21 @@ public class AdminController {
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("Usuario registrado exitosamente."));
+    }
+
+    @PostMapping("/caja/{id}/forzar-cierre")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> forzarCierreCaja(
+            @PathVariable java.util.UUID id,
+            @jakarta.validation.Valid @RequestBody com.example.mpct.dto.caja.ForzarCierreRequest request,
+            java.security.Principal principal
+    ) {
+        try {
+            cajaService.forzarCierreCaja(id, request, principal.getName());
+            return ResponseEntity.ok(new MessageResponse("Caja cerrada exitosamente por el administrador."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
     }
     
     public record MessageResponse(String message) {}

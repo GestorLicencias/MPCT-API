@@ -9,7 +9,9 @@ public interface CajaService {
     void abrirCaja(String email, AbrirCajaRequest request);
     void cerrarCaja(String email, java.math.BigDecimal montoFisico);
     CajaEstadoResponse obtenerEstadoCaja(String email);
-    TramiteResponse registrarPagoPresencial(String email, PagoPresencialRequest request);
+    com.example.mpct.dto.caja.PagoPresencialResponse registrarPagoPresencial(String email, com.example.mpct.dto.caja.PagoPresencialRequest request);
     java.util.List<java.util.Map<String, Object>> obtenerAlertasLicencias();
     void enviarRecordatorioLicencia(String ruc);
+    void forzarCierreCaja(java.util.UUID cajaId, com.example.mpct.dto.caja.ForzarCierreRequest request, String adminEmail);
+    String validarPagoCajero(java.util.UUID pagoId, boolean aprobado, String cajeroEmail);
 }

@@ -5,6 +5,7 @@ import com.example.mpct.service.*;
 import com.example.mpct.model.entity.*;
 import com.example.mpct.model.enums.*;
 import com.example.mpct.repository.InspeccionRepository;
+import com.example.mpct.repository.FeriadoRepository;
 import com.example.mpct.repository.TramiteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,12 +16,23 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class InspeccionServiceImpl implements InspeccionService {
 
     private final InspeccionRepository inspeccionRepository;
     private final TramiteRepository tramiteRepository;
     private final LicenciaService licenciaService;
+    private final com.example.mpct.service.TramiteService tramiteService;
+    private final FeriadoRepository feriadoRepository;
+    private final InspeccionSchedulingService inspeccionSchedulingService;
+
+    public InspeccionServiceImpl(InspeccionRepository inspeccionRepository, TramiteRepository tramiteRepository, LicenciaService licenciaService, @org.springframework.context.annotation.Lazy com.example.mpct.service.TramiteService tramiteService, FeriadoRepository feriadoRepository, @org.springframework.context.annotation.Lazy InspeccionSchedulingService inspeccionSchedulingService) {
+        this.inspeccionRepository = inspeccionRepository;
+        this.tramiteRepository = tramiteRepository;
+        this.licenciaService = licenciaService;
+        this.tramiteService = tramiteService;
+        this.feriadoRepository = feriadoRepository;
+        this.inspeccionSchedulingService = inspeccionSchedulingService;
+    }
 
     @Transactional
     public Inspeccion programarInspeccionInicial(Tramite tramite) {
@@ -55,7 +67,7 @@ public class InspeccionServiceImpl implements InspeccionService {
 
         if (conforme) {
             inspeccion.setEstado(EstadoInspeccion.CONFORME);
-            tramite.setEstado(EstadoTramite.APROBADO);
+            tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
             tramite.setObservacionesGenerales(null);
             tramite.setArchivosObservados(null);
             
@@ -64,20 +76,21 @@ public class InspeccionServiceImpl implements InspeccionService {
             
         } else {
             inspeccion.setEstado(EstadoInspeccion.OBSERVADA);
-            tramite.setEstado(EstadoTramite.OBSERVADO);
             tramite.setObservacionesGenerales(observaciones);
             tramite.setArchivosObservados(archivosObservados);
             
             if (inspeccion.getNumeroInspeccion() == 1) {
-                tramite.setEstado(EstadoTramite.OBSERVADO);
                 tramite.setFechaLimiteSubsanacion(sumarDiasHabiles(LocalDateTime.now(), 30));
+                tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.OBSERVADO, observaciones);
+                
+                // Reprogramar automáticamente la 2da visita a los 30 días hábiles
+                inspeccionSchedulingService.programarInspeccion(tramite, 2, 30);
             } else {
-                // Segunda inspección desaprobada = Trámite Terminado
-                tramite.setEstado(EstadoTramite.TERMINADO);
+                // Segunda inspección desaprobada = Trámite Rechazado
+                tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.RECHAZADO, "Segunda inspección desaprobada.");
             }
         }
 
-        tramiteRepository.save(tramite);
         return inspeccionRepository.save(inspeccion);
     }
 
@@ -85,19 +98,10 @@ public class InspeccionServiceImpl implements InspeccionService {
         LocalDateTime result = fecha;
         int addedDays = 0;
         
-        // Feriados fijos de prueba (28 y 29 de julio)
-        java.util.List<java.time.LocalDate> feriados = java.util.List.of(
-            java.time.LocalDate.of(fecha.getYear(), 7, 28),
-            java.time.LocalDate.of(fecha.getYear(), 7, 29),
-            java.time.LocalDate.of(fecha.getYear(), 1, 1),
-            java.time.LocalDate.of(fecha.getYear(), 5, 1),
-            java.time.LocalDate.of(fecha.getYear(), 12, 25)
-        );
-
         while (addedDays < dias) {
             result = result.plusDays(1);
             boolean isWeekend = result.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || result.getDayOfWeek() == java.time.DayOfWeek.SUNDAY;
-            boolean isFeriado = feriados.contains(result.toLocalDate());
+            boolean isFeriado = feriadoRepository.existsByFecha(result.toLocalDate());
             
             if (!isWeekend && !isFeriado) {
                 addedDays++;

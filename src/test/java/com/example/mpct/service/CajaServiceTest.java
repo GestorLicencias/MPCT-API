@@ -71,7 +71,9 @@ public class CajaServiceTest {
         when(cajaRepository.findByUsuarioIdAndEstado(testUser.getId(), EstadoCaja.ABIERTA)).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(RuntimeException.class, () -> {
-            cajaService.registrarPagoPresencial("admin@mpct.gob.pe", new PagoPresencialRequest("20123456789", "EFECTIVO"));
+            cajaService.registrarPagoPresencial("admin@mpct.gob.pe", new PagoPresencialRequest("20123456789", java.util.List.of(
+                new PagoPresencialRequest.PagoDetalleDTO(com.example.mpct.model.enums.MetodoPago.EFECTIVO, new java.math.BigDecimal("100.00"), new java.math.BigDecimal("100.00"), null)
+            )));
         });
         assertTrue(exception.getMessage().contains("Debe abrir la caja antes de registrar pagos"));
     }

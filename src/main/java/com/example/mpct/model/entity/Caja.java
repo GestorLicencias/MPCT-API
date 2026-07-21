@@ -45,4 +45,10 @@ public class Caja {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoCaja estado; // ABIERTA, CERRADA
+
+    @Column(nullable = true)
+    private String motivoCierreForzado;
+
+    @Column(nullable = true)
+    private String cerradoPorAdmin;
 }

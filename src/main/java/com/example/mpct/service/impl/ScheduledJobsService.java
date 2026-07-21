@@ -22,6 +22,7 @@ public class ScheduledJobsService {
     private final InspeccionRepository inspeccionRepository;
     private final LicenciaRepository licenciaRepository;
     private final com.example.mpct.repository.TramiteRepository tramiteRepository;
+    private final com.example.mpct.service.TramiteService tramiteService;
     private final NotificacionService notificacionService;
 
     // Ejecuta todos los días a las 08:00 AM
@@ -35,7 +36,7 @@ public class ScheduledJobsService {
         for (Inspeccion insp : inspecciones) {
             if (insp.getFechaProgramada() != null && insp.getFechaProgramada().toLocalDate().isEqual(manana)) {
                 String ruc = insp.getTramite().getRuc();
-                String negocioEmail = insp.getTramite().getEmail() != null ? insp.getTramite().getEmail() : ruc + "@tramite.com";
+                String negocioEmail = insp.getTramite().getEmail();
                 String inspectorEmail = insp.getInspector() != null ? insp.getInspector().getEmail() : "admin@mpct.gob.pe";
                 
                 String asunto = "Recordatorio de Inspección Programada - " + ruc;
@@ -44,7 +45,12 @@ public class ScheduledJobsService {
                         + "Trámite RUC: " + ruc + "\n"
                         + "Dirección: " + insp.getTramite().getDomicilioFiscal();
 
-                notificacionService.enviarEmail(negocioEmail, asunto, mensaje, insp.getTramite().getId());
+                if (negocioEmail != null && !negocioEmail.trim().isEmpty()) {
+                    notificacionService.enviarEmail(negocioEmail, asunto, mensaje, insp.getTramite().getId());
+                } else {
+                    System.err.println("Trámite " + insp.getTramite().getId() + " sin email registrado, no se pudo notificar al negocio.");
+                }
+                
                 if (insp.getInspector() != null) {
                     notificacionService.enviarEmail(inspectorEmail, asunto, mensaje, insp.getTramite().getId());
                 }
@@ -65,12 +71,16 @@ public class ScheduledJobsService {
                 licenciaRepository.save(lic);
                 
                 String ruc = lic.getTramite().getRuc();
-                String negocioEmail = lic.getTramite().getEmail() != null ? lic.getTramite().getEmail() : ruc + "@tramite.com";
+                String negocioEmail = lic.getTramite().getEmail();
                 String asunto = "Su Licencia de Funcionamiento ha Vencido - " + ruc;
                 String mensaje = "Le informamos que su licencia de funcionamiento Nro " + lic.getNumeroLicencia() 
                         + " ha vencido el día de hoy. Por favor inicie el trámite de renovación.";
                 
-                notificacionService.enviarEmail(negocioEmail, asunto, mensaje, lic.getTramite().getId());
+                if (negocioEmail != null && !negocioEmail.trim().isEmpty()) {
+                    notificacionService.enviarEmail(negocioEmail, asunto, mensaje, lic.getTramite().getId());
+                } else {
+                    System.err.println("Trámite " + lic.getTramite().getId() + " sin email registrado, no se pudo notificar vencimiento.");
+                }
             }
         }
     }
@@ -85,11 +95,15 @@ public class ScheduledJobsService {
         for (Licencia lic : licencias) {
             if (lic.getEstado() == EstadoLicencia.VIGENTE && lic.getFechaVencimiento().toLocalDate().isEqual(limite)) {
                 String ruc = lic.getTramite().getRuc();
-                String negocioEmail = lic.getTramite().getEmail() != null ? lic.getTramite().getEmail() : ruc + "@tramite.com";
+                String negocioEmail = lic.getTramite().getEmail();
                 String asunto = "Aviso: Su Licencia de Funcionamiento está por vencer - " + ruc;
                 String mensaje = "Le informamos que su licencia de funcionamiento Nro " + lic.getNumeroLicencia() 
                         + " vencerá en 30 días. Le sugerimos iniciar el trámite de renovación pronto.";
-                notificacionService.enviarEmail(negocioEmail, asunto, mensaje, lic.getTramite().getId());
+                if (negocioEmail != null && !negocioEmail.trim().isEmpty()) {
+                    notificacionService.enviarEmail(negocioEmail, asunto, mensaje, lic.getTramite().getId());
+                } else {
+                    System.err.println("Trámite " + lic.getTramite().getId() + " sin email registrado, no se pudo notificar por vencer.");
+                }
             }
         }
     }
@@ -103,18 +117,13 @@ public class ScheduledJobsService {
         
         for (com.example.mpct.model.entity.Tramite tramite : tramites) {
             if (tramite.getFechaLimiteSubsanacion() != null && tramite.getFechaLimiteSubsanacion().isBefore(hoy)) {
-                tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.TERMINADO);
-                tramiteRepository.save(tramite);
                 
-                String ruc = tramite.getRuc();
-                String negocioEmail = tramite.getEmail() != null ? tramite.getEmail() : ruc + "@tramite.com";
-                String asunto = "Trámite Terminado por Abandono - " + ruc;
-                String mensaje = "Estimado/a,\n\n"
-                        + "Su trámite ha sido TERMINADO automáticamente por abandono.\n"
-                        + "Ha superado el plazo máximo de 30 días hábiles para levantar las observaciones.\n\n"
-                        + "Municipalidad Provincial de Trujillo.";
-                
-                notificacionService.enviarEmail(negocioEmail, asunto, mensaje, tramite.getId());
+                boolean tieneInspeccionProgramada = tramite.getInspecciones().stream()
+                        .anyMatch(i -> i.getEstado() == EstadoInspeccion.PROGRAMADA);
+
+                if (!tieneInspeccionProgramada) {
+                    tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.ABANDONADO, null);
+                }
             }
         }
     }

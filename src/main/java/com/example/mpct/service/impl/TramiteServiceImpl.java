@@ -28,7 +28,9 @@ public class TramiteServiceImpl implements TramiteService {
     private final LicenciaRepository licenciaRepository;
     private final LicenciaService licenciaService;
     private final InspeccionSchedulingService inspeccionSchedulingService;
+    private final com.example.mpct.repository.UserRepository userRepository;
     private final com.example.mpct.repository.ConfiguracionRepository configuracionRepository;
+    private final NotificacionService notificacionService;
 
     @Transactional
     public TramiteResponse crearTramite(String ruc, String representanteLegal, String rubro, String dni, String email, BigDecimal area, TipoTramite tipo, MultipartFile plano, java.util.List<MultipartFile> fotos) {
@@ -52,7 +54,7 @@ public class TramiteServiceImpl implements TramiteService {
                 java.util.Optional<Tramite> existingTramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc);
                 if (existingTramite.isPresent()) {
                     Tramite t = existingTramite.get();
-                    if (t.getEstado() != EstadoTramite.APROBADO && t.getEstado() != EstadoTramite.TERMINADO && !t.getId().equals(licenciaPrevia.getTramite().getId())) {
+                    if (t.getEstado() != EstadoTramite.APROBADO && t.getEstado() != EstadoTramite.ABANDONADO && t.getEstado() != EstadoTramite.RECHAZADO && !t.getId().equals(licenciaPrevia.getTramite().getId())) {
                         throw new RuntimeException("Ya existe un trámite en curso para este RUC (Estado: " + t.getEstado() + ").");
                     }
                 }
@@ -62,7 +64,7 @@ public class TramiteServiceImpl implements TramiteService {
                 if (existingTramite.isPresent()) {
                     Tramite t = existingTramite.get();
                     // Evitar que haya un trámite en curso
-                    if (t.getEstado() != EstadoTramite.APROBADO && t.getEstado() != EstadoTramite.TERMINADO && !t.getId().equals(licenciaPrevia.getTramite().getId())) {
+                    if (t.getEstado() != EstadoTramite.APROBADO && t.getEstado() != EstadoTramite.ABANDONADO && t.getEstado() != EstadoTramite.RECHAZADO && !t.getId().equals(licenciaPrevia.getTramite().getId())) {
                         throw new RuntimeException("Ya existe un trámite en curso para este RUC (Estado: " + t.getEstado() + ").");
                     }
                 }
@@ -76,7 +78,7 @@ public class TramiteServiceImpl implements TramiteService {
             java.util.Optional<Tramite> existingTramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc);
             if (existingTramite.isPresent()) {
                 Tramite t = existingTramite.get();
-                if (t.getEstado() == EstadoTramite.TERMINADO) {
+                if (t.getEstado() == EstadoTramite.ABANDONADO || t.getEstado() == EstadoTramite.RECHAZADO) {
                     tramiteRepository.delete(t);
                 } else {
                     throw new RuntimeException("Ya existe un trámite en curso para este RUC (Estado: " + t.getEstado() + ").");
@@ -196,15 +198,11 @@ public class TramiteServiceImpl implements TramiteService {
             throw new RuntimeException("Error procesando archivos: " + e.getMessage());
         }
 
-        tramite.setEstado(EstadoTramite.EN_SUBSANACION);
         tramite.setObservacionesGenerales(null);
         tramite.setArchivosObservados(null);
         tramite.setFechaLimiteSubsanacion(null); // Ya subsanó
 
-        tramiteRepository.save(tramite);
-        
-        // Programar segunda inspección automáticamente
-        inspeccionSchedulingService.programarInspeccion(tramite, 2, 3);
+        this.actualizarEstadoTramite(tramite, EstadoTramite.EN_SUBSANACION, null);
         
         return mapToResponse(tramite);
     }
@@ -230,12 +228,11 @@ public class TramiteServiceImpl implements TramiteService {
             pago.setEstadoPago("COMPLETADO");
             pagoRepository.save(pago);
             if (tramite.getRequiereInspeccion()) {
-                tramite.setEstado(EstadoTramite.PENDIENTE_REVISION);
+                this.actualizarEstadoTramite(tramite, EstadoTramite.PENDIENTE_REVISION, null);
             } else {
-                tramite.setEstado(EstadoTramite.PROGRAMADO);
+                this.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
                 inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
             }
-            tramiteRepository.save(tramite);
         } else if ("BANCO_NACION".equals(metodoPago) && voucher != null) {
             if (numeroComprobante == null || numeroComprobante.trim().isEmpty()) {
                 throw new RuntimeException("El número de comprobante es obligatorio para pagos por Banco de la Nación");
@@ -249,11 +246,10 @@ public class TramiteServiceImpl implements TramiteService {
             }
             pagoRepository.save(pago);
             if (tramite.getRequiereInspeccion()) {
-                tramite.setEstado(EstadoTramite.PENDIENTE_REVISION);
+                this.actualizarEstadoTramite(tramite, EstadoTramite.PENDIENTE_REVISION, null);
             } else {
-                tramite.setEstado(EstadoTramite.VALIDANDO_PAGO);
+                this.actualizarEstadoTramite(tramite, EstadoTramite.VALIDANDO_PAGO, null);
             }
-            tramiteRepository.save(tramite);
         } else {
             throw new RuntimeException("Método de pago inválido o falta voucher");
         }
@@ -270,8 +266,7 @@ public class TramiteServiceImpl implements TramiteService {
             throw new RuntimeException("El trámite no está en estado PENDIENTE_REVISION");
         }
 
-        tramite.setEstado(EstadoTramite.APROBADO);
-        tramiteRepository.save(tramite);
+        this.actualizarEstadoTramite(tramite, EstadoTramite.APROBADO, null);
         
         // Cambiar la licencia anterior a HISTORICA (si existe)
         java.util.Optional<Licencia> licenciaPreviaOpt = licenciaRepository.findByTramiteRuc(ruc);
@@ -312,5 +307,55 @@ public class TramiteServiceImpl implements TramiteService {
                 t.getCreatedAt(), t.getUpdatedAt(),
                 pagoRechazado
         );
+    }
+
+    @Override
+    @Transactional
+    public void actualizarEstadoTramite(Tramite tramite, EstadoTramite nuevoEstado, String detalleExtra) {
+        tramite.setEstado(nuevoEstado);
+        tramiteRepository.save(tramite);
+
+        String email = tramite.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            System.err.println("Trámite " + tramite.getId() + " sin email registrado, no se pudo notificar al usuario.");
+            return;
+        }
+
+        try {
+            String asunto = "Actualización de su Trámite - RUC: " + tramite.getRuc();
+            String mensaje = null;
+
+            switch (nuevoEstado) {
+                case PENDIENTE_PAGO:
+                    mensaje = "Su pago no pudo ser validado. Por favor, verifique el comprobante y vuelva a intentarlo.";
+                    break;
+                case PAGADO:
+                    mensaje = "Su trámite ha sido pagado. " + (tramite.getRequiereInspeccion() ? "Se le programará una inspección inicial." : "En breve recibirá su licencia.");
+                    break;
+                case PENDIENTE_REVISION:
+                    mensaje = "Su trámite está a la espera de validación administrativa final.";
+                    break;
+                case OBSERVADO:
+                    mensaje = "Su trámite presenta observaciones: " + (detalleExtra != null ? detalleExtra : "");
+                    break;
+                case APROBADO:
+                    mensaje = "¡Felicidades! Su licencia ha sido aprobada.";
+                    break;
+                case ABANDONADO:
+                    mensaje = "Su trámite ha sido ABANDONADO automáticamente por exceder los 30 días para levantar observaciones.";
+                    break;
+                case RECHAZADO:
+                    mensaje = "Su trámite ha sido RECHAZADO definitivamente (" + (detalleExtra != null ? detalleExtra : "Inspección no conforme") + ").";
+                    break;
+                default:
+                    break;
+            }
+
+            if (mensaje != null) {
+                notificacionService.enviarEmail(email, asunto, mensaje, tramite.getId());
+            }
+        } catch (Exception e) {
+            System.err.println("Fallo al enviar notificación de estado: " + e.getMessage());
+        }
     }
 }

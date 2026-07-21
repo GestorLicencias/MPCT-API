@@ -34,8 +34,55 @@ public class LicenciaServiceImpl implements LicenciaService {
     private final TemplateEngine templateEngine;
 
     public byte[] generarCertificadoPorRuc(String ruc) {
-        return licenciaRepository.findPdfArchivoByTramiteRuc(ruc)
+        Licencia licencia = licenciaRepository.findByTramiteRuc(ruc)
                 .orElseThrow(() -> new RuntimeException("Licencia o trámite no encontrado para este RUC"));
+                
+        byte[] pdf = licencia.getPdfArchivo();
+        
+        if (licencia.getEstado() == com.example.mpct.model.enums.EstadoLicencia.VENCIDA || 
+            licencia.getEstado() == com.example.mpct.model.enums.EstadoLicencia.HISTORICA) {
+            try {
+                com.lowagie.text.pdf.PdfReader reader = new com.lowagie.text.pdf.PdfReader(pdf);
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                com.lowagie.text.pdf.PdfStamper stamper = new com.lowagie.text.pdf.PdfStamper(reader, out);
+                
+                int numPages = reader.getNumberOfPages();
+                com.lowagie.text.pdf.BaseFont font = com.lowagie.text.pdf.BaseFont.createFont(
+                    com.lowagie.text.pdf.BaseFont.HELVETICA_BOLD, com.lowagie.text.pdf.BaseFont.WINANSI, com.lowagie.text.pdf.BaseFont.EMBEDDED);
+                
+                String watermarkText = licencia.getEstado() == com.example.mpct.model.enums.EstadoLicencia.VENCIDA ? "VENCIDA" : "NO VALIDA";
+                
+                for (int i = 1; i <= numPages; i++) {
+                    com.lowagie.text.pdf.PdfContentByte over = stamper.getOverContent(i);
+                    over.saveState();
+                    
+                    com.lowagie.text.pdf.PdfGState gs = new com.lowagie.text.pdf.PdfGState();
+                    gs.setFillOpacity(0.3f);
+                    over.setGState(gs);
+                    
+                    over.beginText();
+                    over.setFontAndSize(font, 100);
+                    over.setColorFill(java.awt.Color.RED);
+                    
+                    com.lowagie.text.Rectangle pageSize = reader.getPageSizeWithRotation(i);
+                    float x = (pageSize.getLeft() + pageSize.getRight()) / 2;
+                    float y = (pageSize.getBottom() + pageSize.getTop()) / 2;
+                    
+                    over.showTextAligned(com.lowagie.text.Element.ALIGN_CENTER, watermarkText, x, y, 45);
+                    over.endText();
+                    over.restoreState();
+                }
+                stamper.close();
+                reader.close();
+                
+                return out.toByteArray();
+            } catch (Exception e) {
+                System.err.println("No se pudo aplicar la marca de agua: " + e.getMessage());
+                // Fallback to original if something fails
+            }
+        }
+        
+        return pdf;
     }
 
     public Licencia generarLicencia(Tramite tramite) {

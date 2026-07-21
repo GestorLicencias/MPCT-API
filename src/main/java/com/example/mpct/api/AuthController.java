@@ -20,4 +20,27 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(
+            @Valid @RequestBody com.example.mpct.dto.auth.ForgotPasswordRequest request,
+            jakarta.servlet.http.HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest.getRemoteAddr();
+        try {
+            authService.forgotPassword(request.email(), ip);
+            return ResponseEntity.ok(java.util.Map.of("message", "Si el correo está registrado, se ha enviado un enlace de recuperación."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody com.example.mpct.dto.auth.ResetPasswordRequest request) {
+        try {
+            authService.resetPassword(request.token(), request.newPassword());
+            return ResponseEntity.ok(java.util.Map.of("message", "Contraseña actualizada exitosamente."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
 }

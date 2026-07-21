@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/v1/tramites")
@@ -20,6 +21,16 @@ public class TramiteController {
     private final TramiteRepository tramiteRepository;
     private final com.example.mpct.service.MercadoPagoService mercadoPagoService;
     private final com.example.mpct.service.DniScrapingService dniScrapingService;
+    private final com.example.mpct.service.RucValidationService rucValidationService;
+
+    @GetMapping("/ruc/{ruc}/validar")
+    public ResponseEntity<com.example.mpct.dto.tramite.ValidacionRucResponse> validarRuc(@PathVariable String ruc, HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ResponseEntity.ok(rucValidationService.validarRuc(ruc, ip));
+    }
 
     @GetMapping("/dni/{dni}")
     public ResponseEntity<java.util.Map<String, String>> consultarDni(@PathVariable String dni) {

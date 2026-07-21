@@ -23,9 +23,13 @@ import java.math.BigDecimal;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("local")
 public class E2ELegacyFlowIntegrationTest {
 
     @Autowired
@@ -90,6 +94,7 @@ public class E2ELegacyFlowIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").exists())
                 .andExpect(jsonPath("$.role").value("ADMIN"));

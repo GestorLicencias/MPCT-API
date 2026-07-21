@@ -51,4 +51,13 @@ public class Pago {
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime fechaPago;
+
+    @Column(nullable = true)
+    private String motivoOverride;
+
+    @Column(nullable = true)
+    private String validadoPorAdmin;
+
+    @OneToMany(mappedBy = "pago", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<PagoDetalle> detalles = new java.util.ArrayList<>();
 }

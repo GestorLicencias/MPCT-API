@@ -29,12 +29,16 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
     private final PagoRepository pagoRepository;
     private final InspeccionService inspeccionService;
     private final InspeccionSchedulingService inspeccionSchedulingService;
+    private final com.example.mpct.service.ComprobanteService comprobanteService;
+    private final com.example.mpct.service.TramiteService tramiteService;
 
-    public MercadoPagoServiceImpl(TramiteRepository tramiteRepository, PagoRepository pagoRepository, InspeccionService inspeccionService, InspeccionSchedulingService inspeccionSchedulingService) {
+    public MercadoPagoServiceImpl(TramiteRepository tramiteRepository, PagoRepository pagoRepository, InspeccionService inspeccionService, InspeccionSchedulingService inspeccionSchedulingService, com.example.mpct.service.ComprobanteService comprobanteService, com.example.mpct.service.TramiteService tramiteService) {
         this.tramiteRepository = tramiteRepository;
         this.pagoRepository = pagoRepository;
         this.inspeccionService = inspeccionService;
         this.inspeccionSchedulingService = inspeccionSchedulingService;
+        this.comprobanteService = comprobanteService;
+        this.tramiteService = tramiteService;
     }
 
     @Value("${mercadopago.access.token}")
@@ -43,7 +47,7 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
     @Value("${app.frontend.url:https://mpct-frontend.vercel.app}")
     private String frontendUrl;
 
-    @Value("${app.backend.url:https://mpct-api-264213836001.us-east1.run.app}")
+    @Value("${app.backend.url:https://mpct-backend-343008001984.us-central1.run.app}")
     private String backendUrl;
 
     @PostConstruct
@@ -132,14 +136,16 @@ public class MercadoPagoServiceImpl implements MercadoPagoService {
                 pago.setPasarelaTransactionId(paymentId);
                 pago.setEstadoPago("COMPLETADO");
                 pago.setFechaPago(java.time.LocalDateTime.now());
-                pagoRepository.save(pago);
+                pago = pagoRepository.save(pago);
+                
+                // Generar comprobante interno
+                comprobanteService.generarYGuardar(pago);
                 if (tramite.getRequiereInspeccion()) {
-                    tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION);
+                    tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PENDIENTE_REVISION, null);
                 } else {
-                    tramite.setEstado(com.example.mpct.model.enums.EstadoTramite.PROGRAMADO);
+                    tramiteService.actualizarEstadoTramite(tramite, com.example.mpct.model.enums.EstadoTramite.PROGRAMADO, null);
                     inspeccionSchedulingService.programarInspeccion(tramite, 1, 3);
                 }
-                tramiteRepository.save(tramite);
                 
                 System.out.println("Trámite RUC " + tramite.getRuc() + " pagado y actualizado exitosamente.");
             }

@@ -9,6 +9,7 @@ import com.example.mpct.model.enums.Role;
 import com.example.mpct.repository.InspeccionRepository;
 import com.example.mpct.repository.TramiteRepository;
 import com.example.mpct.repository.UserRepository;
+import com.example.mpct.repository.FeriadoRepository;
 import com.example.mpct.service.InspeccionSchedulingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,12 +21,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class InspeccionSchedulingServiceImpl implements InspeccionSchedulingService {
 
     private final InspeccionRepository inspeccionRepository;
     private final UserRepository userRepository;
     private final TramiteRepository tramiteRepository;
+    private final com.example.mpct.service.TramiteService tramiteService;
+    private final FeriadoRepository feriadoRepository;
+
+    public InspeccionSchedulingServiceImpl(InspeccionRepository inspeccionRepository, UserRepository userRepository, TramiteRepository tramiteRepository, @org.springframework.context.annotation.Lazy com.example.mpct.service.TramiteService tramiteService, FeriadoRepository feriadoRepository) {
+        this.inspeccionRepository = inspeccionRepository;
+        this.userRepository = userRepository;
+        this.tramiteRepository = tramiteRepository;
+        this.tramiteService = tramiteService;
+        this.feriadoRepository = feriadoRepository;
+    }
 
     @Value("${app.inspecciones.max-por-dia-inspector:5}")
     private int maxInspeccionesPorDia;
@@ -44,7 +54,10 @@ public class InspeccionSchedulingServiceImpl implements InspeccionSchedulingServ
         // Buscar el primer slot disponible
         // Máximo buscamos hasta 30 días adelante para evitar bucles infinitos
         for (int i = 0; i < 30; i++) {
-            if (fechaPropuesta.getDayOfWeek() == DayOfWeek.SATURDAY || fechaPropuesta.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            boolean isWeekend = fechaPropuesta.getDayOfWeek() == DayOfWeek.SATURDAY || fechaPropuesta.getDayOfWeek() == DayOfWeek.SUNDAY;
+            boolean isFeriado = feriadoRepository.existsByFecha(fechaPropuesta.toLocalDate());
+            
+            if (isWeekend || isFeriado) {
                 fechaPropuesta = fechaPropuesta.plusDays(1);
                 continue;
             }
@@ -73,8 +86,7 @@ public class InspeccionSchedulingServiceImpl implements InspeccionSchedulingServ
                 .build();
         inspeccionRepository.save(inspeccion);
 
-        tramite.setEstado(EstadoTramite.PROGRAMADO);
-        tramiteRepository.save(tramite);
+        tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
 
         return inspeccion;
     }
@@ -89,8 +101,7 @@ public class InspeccionSchedulingServiceImpl implements InspeccionSchedulingServ
                 .build();
         inspeccionRepository.save(inspeccion);
 
-        tramite.setEstado(EstadoTramite.PROGRAMADO);
-        tramiteRepository.save(tramite);
+        tramiteService.actualizarEstadoTramite(tramite, EstadoTramite.PROGRAMADO, null);
         return inspeccion;
     }
 
@@ -99,7 +110,9 @@ public class InspeccionSchedulingServiceImpl implements InspeccionSchedulingServ
         int addedDays = 0;
         while (addedDays < dias) {
             result = result.plusDays(1);
-            if (!(result.getDayOfWeek() == DayOfWeek.SATURDAY || result.getDayOfWeek() == DayOfWeek.SUNDAY)) {
+            boolean isWeekend = result.getDayOfWeek() == DayOfWeek.SATURDAY || result.getDayOfWeek() == DayOfWeek.SUNDAY;
+            boolean isFeriado = feriadoRepository.existsByFecha(result.toLocalDate());
+            if (!isWeekend && !isFeriado) {
                 addedDays++;
             }
         }

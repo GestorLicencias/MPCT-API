@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres-local:
+    image: postgres:15-alpine
+    container_name: mpct-db-local
+    environment:
+      POSTGRES_DB: mpct_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: rootpassword
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-local:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata-local:

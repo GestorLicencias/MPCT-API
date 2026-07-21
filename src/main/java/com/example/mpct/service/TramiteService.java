@@ -10,4 +10,5 @@ public interface TramiteService {
     TramiteResponse actualizarArchivos(String ruc, MultipartFile plano, MultipartFile foto, MultipartFile foto2, MultipartFile foto3, MultipartFile foto4);
     TramiteResponse pagarTramite(String ruc, String metodoPago, MultipartFile voucher, String transactionId, String numeroComprobante);
     TramiteResponse aprobarTramiteRevision(String ruc);
+    void actualizarEstadoTramite(com.example.mpct.model.entity.Tramite tramite, com.example.mpct.model.enums.EstadoTramite nuevoEstado, String detalleExtra);
 }

@@ -5,7 +5,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import com.example.mpct.repository.FeriadoRepository;
+import java.time.LocalDate;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
 public class InspeccionServiceTest {
+
+    @Mock
+    private FeriadoRepository feriadoRepository;
 
     @InjectMocks
     private InspeccionServiceImpl inspeccionService;
@@ -35,6 +43,11 @@ public class InspeccionServiceTest {
         // Miercoles 29 (Feriado) -> salta
         // Jueves 30 (Día 2)
         // Viernes 31 (Día 3)
+        when(feriadoRepository.existsByFecha(any(LocalDate.class))).thenAnswer(invocation -> {
+            LocalDate date = invocation.getArgument(0);
+            return date.equals(LocalDate.of(2026, 7, 28)) || date.equals(LocalDate.of(2026, 7, 29));
+        });
+
         LocalDateTime resultado = inspeccionService.sumarDiasHabiles(viernes, 3);
         
         assertEquals(31, resultado.getDayOfMonth());
@@ -54,6 +67,8 @@ public class InspeccionServiceTest {
         // Julio 2026 empieza en Miércoles.
         // 1 al 8 de julio (Día 1 a 8). Fines de semana: 4, 5 (2 días).
         // Por lo tanto, 8 días hábiles nos llevan al Viernes 10 de Julio.
+        when(feriadoRepository.existsByFecha(any(LocalDate.class))).thenReturn(false);
+        
         LocalDateTime resultado = inspeccionService.sumarDiasHabiles(inicio, 30);
 
         assertEquals(13, resultado.getDayOfMonth());
