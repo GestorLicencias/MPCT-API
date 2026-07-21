@@ -170,7 +170,7 @@ public class TramiteServiceImpl implements TramiteService {
 
     @Override
     @Transactional
-    public TramiteResponse actualizarArchivos(String ruc, MultipartFile plano, MultipartFile foto, MultipartFile foto2, MultipartFile foto3, MultipartFile foto4) {
+    public TramiteResponse actualizarArchivos(String ruc, MultipartFile plano) {
         Tramite tramite = tramiteRepository.findTopByRucOrderByCreatedAtDesc(ruc)
                 .orElseThrow(() -> new RuntimeException("Trámite no encontrado"));
 
@@ -321,7 +321,8 @@ public class TramiteServiceImpl implements TramiteService {
                     mensaje = "Su trámite está a la espera de validación administrativa final.";
                     break;
                 case OBSERVADO:
-                    mensaje = "Su trámite presenta observaciones: " + (detalleExtra != null ? detalleExtra : "");
+                    String fechaStr = (tramite.getFechaLimiteSubsanacion() != null) ? tramite.getFechaLimiteSubsanacion().toLocalDate().toString() : "fecha a programar";
+                    mensaje = "Su trámite presenta observaciones: " + (detalleExtra != null ? detalleExtra : "") + ". Tiene como máximo hasta el " + fechaStr + " para subsanar su plano mediante el portal, fecha en la que se realizará la segunda y última inspección.";
                     break;
                 case APROBADO:
                     mensaje = "¡Felicidades! Su licencia ha sido aprobada.";

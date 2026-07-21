@@ -189,13 +189,9 @@ public class TramiteController {
     @PatchMapping("/{ruc}/archivos")
     public ResponseEntity<TramiteResponse> actualizarArchivos(
             @PathVariable String ruc,
-            @RequestParam(value = "plano", required = false) MultipartFile plano,
-            @RequestParam(value = "foto", required = false) MultipartFile foto,
-            @RequestParam(value = "foto2", required = false) MultipartFile foto2,
-            @RequestParam(value = "foto3", required = false) MultipartFile foto3,
-            @RequestParam(value = "foto4", required = false) MultipartFile foto4
+            @RequestParam(value = "plano", required = false) MultipartFile plano
     ) {
-        return ResponseEntity.ok(tramiteService.actualizarArchivos(ruc, plano, foto, foto2, foto3, foto4));
+        return ResponseEntity.ok(tramiteService.actualizarArchivos(ruc, plano));
     }
 
     @GetMapping("/validar/{numeroLicencia}")
