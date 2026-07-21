@@ -83,5 +83,3 @@ docker-compose up --build -d
 
 Para la pasarela de pagos se utiliza el SDK nativo de Java. Recuerda configurar correctamente la URL base en el portal de desarrolladores de Mercado Pago para la recepción de Webhooks.
 
----
-> **Nota de Documentación:** Generado siguiendo las directrices del skill `doc-updater`, asegurando un mapeo real de las dependencias (`pom.xml`) y la estructura de paquetes actual.
