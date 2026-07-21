@@ -125,10 +125,12 @@ public class AdminController {
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> validarPago(
             @PathVariable java.util.UUID id, 
-            @RequestParam("aprobado") boolean aprobado,
-            @RequestParam(value = "motivoOverride", required = false) String motivoOverride,
+            @RequestBody ValidarPagoAdminRequest request,
             java.security.Principal principal
     ) {
+        boolean aprobado = request.aprobado();
+        String motivoOverride = request.motivoOverride();
+
         if (aprobado && (motivoOverride == null || motivoOverride.trim().isEmpty())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Debe especificar un motivoOverride para validar pagos administrativamente."));
         }
@@ -240,5 +242,6 @@ public class AdminController {
         }
     }
     
+    public record ValidarPagoAdminRequest(boolean aprobado, String motivoOverride) {}
     public record MessageResponse(String message) {}
 }
