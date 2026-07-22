@@ -37,6 +37,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        Map<String, String> response = new HashMap<>();
+        String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        if (msg.contains("unique constraint") || msg.contains("uk_") || msg.contains("tramite_id")) {
+            response.put("message", "Este trámite ya cuenta con un pago registrado o se está procesando actualmente. Refresque la vista.");
+        } else {
+            response.put("message", "Error de integridad de datos. Posible registro duplicado.");
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
         Map<String, String> response = new HashMap<>();
