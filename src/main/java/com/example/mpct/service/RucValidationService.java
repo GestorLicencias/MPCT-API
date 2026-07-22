@@ -39,7 +39,7 @@ public class RucValidationService {
     }
 
     private Bucket newBucket(String ip) {
-        Bandwidth limit = Bandwidth.classic(5, Refill.greedy(5, Duration.ofHours(1)));
+        Bandwidth limit = Bandwidth.classic(20, Refill.greedy(20, Duration.ofHours(1)));
         return Bucket.builder()
                 .addLimit(limit)
                 .build();
